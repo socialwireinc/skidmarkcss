@@ -30,7 +30,7 @@ class SkidmarkCSS:
       if type(leading) is int and leading:
         print "%s%s" % ( "    " * leading, s )
       else:
-        print s    
+        print s
     return
     
   def _parse_file(self):
@@ -60,7 +60,7 @@ class SkidmarkCSS:
     tree, remainder = self.ast
     if remainder.strip():
       error_line = 1 + self.src.rstrip().count("\n") - remainder.count("\n")
-      raise ErrorInFile("Error parsing input file\nLine %d: %s" % ( error_line, remainder.strip().split("\n")[0] ))
+      raise ErrorInFile("Error parsing '%s'\nLine %d: %s" % ( self.s_infile, error_line, remainder.strip().split("\n")[0] ))
     
     tree_len = len(tree)
     if tree_len != 1:
@@ -199,7 +199,7 @@ class SkidmarkCSS:
 
 if __name__ == '__main__':
   try:
-    sm = SkidmarkCSS("sample.smcss", s_outfile="sample.css", quiet=True)
+    sm = SkidmarkCSS("sample.smcss", s_outfile="sample.css", quiet=False)
     print "\n".join(sm.get_processed_tree())
   except:
     print "=" * 72
@@ -217,7 +217,5 @@ if __name__ == '__main__':
       print e
     except Exception, e:
       raise
-  finally:
-    print "=" * 72
-
-
+    finally:
+      print "=" * 72

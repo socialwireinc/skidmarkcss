@@ -1,0 +1,9 @@
+ul, li { font-weight: bold; }
+a { text-decoration: none; color: red; background-color: green; }
+a:hover { color:green;}
+@include(sample2.smcss);
+b { 
+  font-weight: bold;
+  color: red;
+  @include("sample2.smcss");
+}
