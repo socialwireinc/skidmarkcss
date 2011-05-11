@@ -63,7 +63,7 @@ def combinator():
   return [ rec('[+>]') ]
 
 def selector():
-  return simple_selector(), ZERO_OR_ONE, (ZERO_OR_ONE, combinator, selector)   # TODO: review, might be wrong...
+  return simple_selector(), ZERO_OR_ONE, (ZERO_OR_ONE, combinator, selector)
 
 def directive():
   return "@", function(), ";"
@@ -84,7 +84,7 @@ def property_unterminated():
   return propertyname, ":", propertyvalue
 
 def declarationblock():
-  return "{", ZERO_OR_MORE, [ property, directive, comment ], ZERO_OR_ONE, property_unterminated, "}"
+  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration ], ZERO_OR_ONE, property_unterminated, "}"
 
 def declaration():
   return full_selector(), declarationblock
