@@ -10,7 +10,39 @@ class UnrecognizedSelector(Exception): pass
 class Unimplemented(Exception): pass
 class ErrorInFile(Exception): pass
 
-class SkidmarkCSS:
+class n_Declaration(object):
+  def __init__(self, parent):
+    self.parent = parent
+    self.selectors = []
+    self.declarationblock = None
+  
+  def add_selectors(self, selectors):
+    self.selectors.extend(selectors)
+    return self.selectors
+    
+  def set_declarationblock(self, declarationblock):
+    self.declarationblock = declarationblock
+    return declarationblock
+
+
+class n_Selector(object):
+  def __init__(self, parent, selector):
+    self.parent = parent
+    self.selector = selector
+  
+class n_DeclarationBlock(object):
+  def __init__(self, parent):
+    self.parent = parent
+    self.properties = []
+  
+  def __nonzero__(self):
+    return len(self.properties) > 0
+  
+  def add_property(self, property):
+    self.properties.append(property)  
+
+
+class SkidmarkCSS(object):
   def __init__(self, s_infile, s_outfile="outfile.css", quiet=False):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     self.s_infile = s_infile
@@ -68,6 +100,9 @@ class SkidmarkCSS:
     
     self._log("Processing AST")
     data = self._process_node(tree[0])
+    
+    raise Exception(data)
+    
     if self.s_outfile:
       self._create_outfile(data)
     return data
@@ -79,7 +114,7 @@ class SkidmarkCSS:
     open(self.s_outfile, "wt").write("\n".join(data))
     return
   
-  def _process_node(self, node):
+  def _process_node(self, node, parent=None):
     """Process a single node from the AST"""
     
     self.log_id = self.log_id + 1
@@ -89,14 +124,14 @@ class SkidmarkCSS:
       raise UnrecognizedParsedTree("Nodes should only have 2 elements, not %d: %s" % ( node_len, str(node) ))
     
     fn_name = "".join([ "_nodeprocessor_", node[0] ])
-    
-    self._log("%s" % ( fn_name ), leading=self.log_id)
+    self._log("@%s" % ( fn_name, ), leading=self.log_id)
+    self._log("* parent=%s" % ( parent, ), leading=self.log_id)
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Node type is unimplemented: %s" % ( fn_name, ))
       
-    processor_result = getattr(self, fn_name)(node[1])
-    self._log("-----> %s" % ( processor_result, ), leading=self.log_id)
+    processor_result = getattr(self, fn_name)(node[1], parent)
+    self._log("--> %s" % ( processor_result, ), leading=self.log_id)
     
     self.log_id = self.log_id - 1
     return processor_result
@@ -106,20 +141,27 @@ class SkidmarkCSS:
   # Node Processors: What interprets the AST
   #
   
-  def _nodeprocessor_language(self, data):
+  def _nodeprocessor_language(self, data, parent):
     declarations = []
     for node_data in data:
       declarations.append(self._process_node(node_data))
     return declarations
   
-  def _nodeprocessor_declaration(self, data):
-    declaration_parts = []
+  def _nodeprocessor_declaration(self, data, parent):
+    oDeclaration = n_Declaration(parent)
+    
+    parts = []
     for node_data in data:
-      declaration_parts.append(self._process_node(node_data))
-    declaration = "%s %s" % ( ", ".join(declaration_parts[:-1]), declaration_parts[-1] )
-    return declaration
+      part = self._process_node(node_data, oDeclaration)
+      parts.append(part)
+    
+    selectors, declarationblock = (parts[:-1], parts[-1])
+    oDeclaration.add_selectors(selectors)
+    oDeclaration.set_declarationblock(declarationblock)
+    
+    return oDeclaration
   
-  def _nodeprocessor_selector(self, data):
+  def _nodeprocessor_selector(self, data, parent):
     selector_parts = []
     for selector_type, selector_item in data:
       if selector_type == "element_name":
@@ -133,20 +175,19 @@ class SkidmarkCSS:
       else:
         raise UnrecognizedSelector(selector_type)
         
-    return "".join(selector_parts)
+    return n_Selector(parent, "".join(selector_parts))
   
-  def _nodeprocessor_declarationblock(self, data):
-    blocks = []
+  def _nodeprocessor_declarationblock(self, data, parent):
+    oDeclarationBlock = n_DeclarationBlock(parent)
+    
     for node_data in data:
-      node_result = self._process_node(node_data)
+      node_result = self._process_node(node_data, oDeclarationBlock)
       if node_result:
-        blocks.append(node_result)
+        oDeclarationBlock.add_property(node_result)
     
-    if blocks:
-      return "{ %s; }" % ( "; ".join(blocks), )
-    return "{}"
+    return oDeclarationBlock
     
-  def _nodeprocessor_property(self, data):
+  def _nodeprocessor_property(self, data, parent):
     name, value = ("", "")
     for property_type, property_item in data:
       if property_type == "propertyname":
@@ -160,10 +201,10 @@ class SkidmarkCSS:
       raise UnrecognizedParsedTree("Failure during property parsing: %s" % ( str(data), ))
     return "%s: %s" % ( name, value )
   
-  def _nodeprocessor_property_unterminated(self, data):
-    return self._nodeprocessor_property(data)
+  def _nodeprocessor_property_unterminated(self, data, parent):
+    return self._nodeprocessor_property(data, parent)
   
-  def _nodeprocessor_directive(self, data):
+  def _nodeprocessor_directive(self, data, parent):
     function_name, param_list = ( data[0], [ _[1].strip() for _ in data[1:] if _ and _[1] and _[1].strip() ] )
     fn_name = "".join([ "_directive_", function_name ])
     
@@ -172,7 +213,7 @@ class SkidmarkCSS:
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Directive is unimplemented: %s" % ( fn_name, ))
       
-    directive_result = getattr(self, fn_name)(*param_list)
+    directive_result = getattr(self, fn_name)(parent, *param_list)
     return directive_result
   
   def _nodeprocessor_comment(self, data):
@@ -183,7 +224,7 @@ class SkidmarkCSS:
   # Directives
   #
   
-  def _directive_include(self, filename):
+  def _directive_include(self, parent, filename):
     if type(filename) is str:
       if filename.startswith('"') and filename.endswith('"'):
         filename = filename[1:-1]
@@ -200,7 +241,7 @@ class SkidmarkCSS:
 if __name__ == '__main__':
   try:
     sm = SkidmarkCSS("sample.smcss", s_outfile="sample.css", quiet=False)
-    print "\n".join(sm.get_processed_tree())
+    #print "\n".join(sm.get_processed_tree())
   except:
     print "=" * 72
     try:
