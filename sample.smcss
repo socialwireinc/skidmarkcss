@@ -1,5 +1,8 @@
-ul {
-  li {
-    color: red;
+a, b {
+  font-size: 11px;
+  ul {
+    font-family: fixed;
+    li { display: inline; }
   }
+  font-weight: bold;
 }

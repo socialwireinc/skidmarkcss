@@ -4,43 +4,14 @@ import re
 import pyPEG
 import skidmarklanguage
 
+from skidmarknodes import *
+
 class FileNotFound(Exception): pass
 class UnrecognizedParsedTree(Exception): pass
 class UnrecognizedSelector(Exception): pass
 class Unimplemented(Exception): pass
 class ErrorInFile(Exception): pass
-
-class n_Declaration(object):
-  def __init__(self, parent):
-    self.parent = parent
-    self.selectors = []
-    self.declarationblock = None
-  
-  def add_selectors(self, selectors):
-    self.selectors.extend(selectors)
-    return self.selectors
-    
-  def set_declarationblock(self, declarationblock):
-    self.declarationblock = declarationblock
-    return declarationblock
-
-
-class n_Selector(object):
-  def __init__(self, parent, selector):
-    self.parent = parent
-    self.selector = selector
-  
-class n_DeclarationBlock(object):
-  def __init__(self, parent):
-    self.parent = parent
-    self.properties = []
-  
-  def __nonzero__(self):
-    return len(self.properties) > 0
-  
-  def add_property(self, property):
-    self.properties.append(property)  
-
+class UnexpectedTreeFormat(Exception): pass
 
 class SkidmarkCSS(object):
   def __init__(self, s_infile, s_outfile="outfile.css", quiet=False):
@@ -60,7 +31,7 @@ class SkidmarkCSS(object):
   def _log(self, s, leading=0):
     if not self.quiet:
       if type(leading) is int and leading:
-        print "%s%s" % ( "    " * leading, s )
+        print "%s%s" % ( "  " * leading, s )
       else:
         print s
     return
@@ -101,17 +72,35 @@ class SkidmarkCSS(object):
     self._log("Processing AST")
     data = self._process_node(tree[0])
     
-    raise Exception(data)
+    print '-' * 30
+    css = self._generate_css(data)
     
     if self.s_outfile:
-      self._create_outfile(data)
+      self._create_outfile(css)
     return data
     
-  def _create_outfile(self, data):
+  def _generate_css(self, tree):
+    # The outer level of the tree should be a list
+    if not type(tree) is list:
+      raise UnexpectedTreeFormat("The tree format passed to the _generate_css() method is nor recognized")
+    
+    for node in tree:
+      if isinstance(node, n_Declaration):
+        # We only expect this node at the top level!
+        print node._represent()
+        print 'Done representing'
+      else:
+        print 'NOOOOOOOOOOOOOOOOOOOOOOO'
+        print type(node)
+        print node
+    
+    return "NOT YET READY"
+    
+  def _create_outfile(self, css_text):
     """Generates the output file (self.s_outfile)"""
     
     self._log("Generating %s" % ( self.s_outfile, ))
-    open(self.s_outfile, "wt").write("\n".join(data))
+    open(self.s_outfile, "wt").write(css_text)
     return
   
   def _process_node(self, node, parent=None):
@@ -125,13 +114,16 @@ class SkidmarkCSS(object):
     
     fn_name = "".join([ "_nodeprocessor_", node[0] ])
     self._log("@%s" % ( fn_name, ), leading=self.log_id)
-    self._log("* parent=%s" % ( parent, ), leading=self.log_id)
+    self._log("P = %s" % ( parent, ), leading=self.log_id)
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Node type is unimplemented: %s" % ( fn_name, ))
       
     processor_result = getattr(self, fn_name)(node[1], parent)
-    self._log("--> %s" % ( processor_result, ), leading=self.log_id)
+    self._log(">>> Generated '%s'" % ( processor_result, ), leading=self.log_id + 1)
+    
+    if isinstance(parent, SkidmarkHierarchy) and isinstance(processor_result, SkidmarkHierarchy):
+      parent.add_child(processor_result)
     
     self.log_id = self.log_id - 1
     return processor_result
