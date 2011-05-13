@@ -84,17 +84,17 @@ class SkidmarkCSS(object):
     if not type(tree) is list:
       raise UnexpectedTreeFormat("The tree format passed to the _generate_css() method is nor recognized")
     
+    css = []
     for node in tree:
       if isinstance(node, n_Declaration):
         # We only expect this node at the top level!
-        print node._represent()
-        print 'Done representing'
+        css.append(node._represent())
       else:
         print 'NOOOOOOOOOOOOOOOOOOOOOOO'
         print type(node)
         print node
     
-    return "NOT YET READY"
+    return "\n".join(css)
     
   def _create_outfile(self, css_text):
     """Generates the output file (self.s_outfile)"""
