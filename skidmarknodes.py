@@ -26,14 +26,26 @@ class SkidmarkHierarchy(object):
     for child in self.children:
       yield child
     return
-
+  
+  def describe_hierarchy(self, level=0, strings=[]):
+    strings.append("    " * level + str(self) + " >>> %d child nodes" % ( len(self.children), ))
+    
+    for child in self.iter_children():
+      if isinstance(child, SkidmarkHierarchy):
+        child.describe_hierarchy(level=level + 1, strings=strings)
+      else:
+        strings.append("    " * (level + 1), " * " + str(child))
+    return strings
 
 class n_Declaration(SkidmarkHierarchy):
   def __init__(self, parent):
     SkidmarkHierarchy.__init__(self, parent)
     self.selectors = []
     self.declarationblock = None
-  
+
+  def __repr__(self):
+    return "__dec__"
+    
   def _represent(self):
     # We have a single declaration block, but the properties from this declaration
     # block may be other n_Declaration objects. Those need to be handled here. We need
@@ -86,6 +98,9 @@ class n_Selector(SkidmarkHierarchy):
     
   def _represent(self):
     return self.selector
+    
+  def __repr__(self):
+    return "__sel__ >>> " + self._represent()
 
 
 class n_DeclarationBlock(SkidmarkHierarchy):
@@ -102,3 +117,6 @@ class n_DeclarationBlock(SkidmarkHierarchy):
   def _represent(self):
     print "properties = ", self.properties
     return "{}"
+  
+  def __repr__(self):
+    return "__blk__ >>> " + "; ".join(map(str, self.properties))

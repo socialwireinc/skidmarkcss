@@ -72,7 +72,14 @@ class SkidmarkCSS(object):
     self._log("Processing AST")
     data = self._process_node(tree[0])
     
-    print '-' * 30
+    self._log("")
+    self._log("DESCRIBING HIERARCHY")
+    self._log("")
+    
+    for node in data:
+      description = node.describe_hierarchy()
+    print "\n".join(description)
+    
     css = self._generate_css(data)
     
     if self.s_outfile:
@@ -174,7 +181,7 @@ class SkidmarkCSS(object):
     
     for node_data in data:
       node_result = self._process_node(node_data, oDeclarationBlock)
-      if node_result:
+      if node_result and not isinstance(node_result, SkidmarkHierarchy):
         oDeclarationBlock.add_property(node_result)
     
     return oDeclarationBlock
