@@ -19,6 +19,7 @@ a:focus {
 
 ul {
     @include(sample-ul.smcss);
+    
     em {
         font-weight: bold;
     }
@@ -27,3 +28,13 @@ ul {
         color: green;
     }
 }
+
+ul.box {
+    @include(sample-ul.smcss);
+    
+    li {
+        color: red;
+    }
+}
+
+#id { font-weight: bold; }

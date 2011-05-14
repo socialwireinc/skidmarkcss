@@ -17,6 +17,7 @@ class UnexpectedTreeFormat(Exception): pass
 class SkidmarkCSS(object):
   def __init__(self, s_infile, s_outfile="outfile.css", quiet=False):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
+    
     self.s_infile = s_infile
     self.s_outfile = s_outfile
     self.quiet = quiet
@@ -27,9 +28,13 @@ class SkidmarkCSS(object):
     return
     
   def get_processed_tree(self):
+    """Return the object's processed tree"""
+    
     return self.processed_tree
   
   def _log(self, s, leading=0):
+    """Print strings to the screen, for debugging"""
+    
     if not self.quiet:
       if type(leading) is int and leading:
         print "%s%s" % ( "  " * (leading * 2), s )
@@ -97,6 +102,9 @@ class SkidmarkCSS(object):
     return data
     
   def _generate_css(self, tree):
+    """Builds the output CSS
+    Returns a list (each line of the CSS output)"""
+    
     # The outer level of the tree should be a list
     if not type(tree) is list:
       raise UnexpectedTreeFormat("The tree format passed to the _generate_css() method is nor recognized")
@@ -145,8 +153,13 @@ class SkidmarkCSS(object):
     processor_result = getattr(self, fn_name)(node[1], parent)
     self._log(">>> Generated '%s'" % ( processor_result, ), leading=self.log_id + 1)
     
-    if isinstance(parent, SkidmarkHierarchy) and isinstance(processor_result, SkidmarkHierarchy):
-      parent.add_child(processor_result)
+    if type(processor_result) is list:
+      for pr in processor_result:
+        if isinstance(parent, SkidmarkHierarchy) and isinstance(pr, SkidmarkHierarchy):
+          parent.add_child(pr)
+    else:
+      if isinstance(parent, SkidmarkHierarchy) and isinstance(processor_result, SkidmarkHierarchy):
+        parent.add_child(processor_result)
     
     self.log_id -= 1
     return processor_result
@@ -157,6 +170,8 @@ class SkidmarkCSS(object):
   #
   
   def _nodeprocessor_language(self, data, parent):
+    """Node Processor: language"""
+    
     declarations = []
     for node_data in data:
       node = self._process_node(node_data)
@@ -169,6 +184,8 @@ class SkidmarkCSS(object):
     return declarations
   
   def _nodeprocessor_declaration(self, data, parent):
+    """Node Processor: declaration"""
+    
     oDeclaration = n_Declaration(parent)
     
     parts = []
@@ -183,10 +200,14 @@ class SkidmarkCSS(object):
     return oDeclaration
   
   def _nodeprocessor_selector(self, data, parent):
-    selector_parts = self._nodepprocessor_heler_selector(data)
+    """Node Processor: selector"""
+    
+    selector_parts = self._nodepprocessor_helper_selector(data)
     return n_Selector(parent, " ".join(selector_parts))
     
-  def _nodepprocessor_heler_selector(self, data):
+  def _nodepprocessor_helper_selector(self, data):
+    """Node Processor Helper Function: selector"""
+    
     selector_parts = []
     
     while data:
@@ -198,19 +219,34 @@ class SkidmarkCSS(object):
       elif selector_type == "pseudo":
         for pseudo_type, pseudo_item in selector_item:
           if pseudo_type == "ident":
-            selector_parts.append(":" + pseudo_item)
+            if selector_parts:
+              selector_parts[-1] = "%s:%s" % ( selector_parts[-1], pseudo_item )
+            else:
+              selector_parts.append(":" + pseudo_item)
           elif pseudo_type == "function":
             raise Unimplemented("%s has not yet been implemented" % ( str(selector_item), ))
+      elif selector_type == "class_":
+        if selector_parts:
+          selector_parts[-1] = "%s%s" % ( selector_parts[-1], selector_item )
+        else:
+          selector_parts.append(selector_item)
+      elif selector_type == "hash":
+        if selector_parts:
+          selector_parts[-1] = "%s%s" % ( selector_parts[-1], selector_item )
+        else:
+          selector_parts.append(selector_item)
       elif selector_type == "combinator":
-        selector_parts.append("".join(selector_item))
+        selector_parts[-1] = "%s%s" % ( selector_parts[-1], "".join(selector_item) )
       elif  selector_type == "selector":
-        selector_parts.extend(self._nodepprocessor_heler_selector(selector_item))
+        selector_parts.extend(self._nodepprocessor_helper_selector(selector_item))
       else:
         raise UnrecognizedSelector(selector_type + ":" + str(selector_item))
       
     return selector_parts
   
   def _nodeprocessor_declarationblock(self, data, parent):
+    """Node Processor: declarationblock"""
+    
     oDeclarationBlock = n_DeclarationBlock(parent)
     
     for node_data in data:
@@ -221,6 +257,8 @@ class SkidmarkCSS(object):
     return oDeclarationBlock
     
   def _nodeprocessor_property(self, data, parent):
+    """Node Processor: property"""
+    
     name, value = ("", "")
     for property_type, property_item in data:
       if property_type == "propertyname":
@@ -235,9 +273,13 @@ class SkidmarkCSS(object):
     return "%s: %s" % ( name, value )
   
   def _nodeprocessor_property_unterminated(self, data, parent):
+    """Node Processor: property_unterminated"""
+    
     return self._nodeprocessor_property(data, parent)
   
   def _nodeprocessor_directive(self, data, parent):
+    """Node Processor: directive"""
+    
     function_name, param_list = ( data[0], [ _[1].strip() for _ in data[1:] if _ and _[1] and _[1].strip() ] )
     fn_name = "".join([ "_directive_", function_name ])
     
@@ -250,6 +292,8 @@ class SkidmarkCSS(object):
     return directive_result
   
   def _nodeprocessor_comment(self, data, parent):
+    """Node Processor: comment"""
+    
     return ""
   
   
@@ -268,7 +312,7 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(filename, s_outfile=None, quiet=False)
+      sm = SkidmarkCSS(filename, s_outfile=None, quiet=self.quiet)
       tree = sm.get_processed_tree()
       if tree:
         for branch in tree:
