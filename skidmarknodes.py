@@ -9,9 +9,6 @@ class SkidmarkHierarchy(object):
   def __repr__(self):
     return "%s__%d" % ( self.__class__.__name__, id(self) )
     
-  def _represent(self):
-    raise Unimplemented("The _represent() method has not been implemented for %s" % ( str(self), ))
-    
   def has_parent(self):
     return not self.parent is None
     
@@ -26,7 +23,25 @@ class SkidmarkHierarchy(object):
     for child in self.children:
       yield child
     return
+    
+  def find_child_declaration_blocks(self, current_list=[]):
+    for child in self.iter_children():
+      if isinstance(child, n_DeclarationBlock):
+        # make sure it has properties
+        if child:
+          current_list.append(child)
+      
+      if isinstance(child, SkidmarkHierarchy):
+        child.find_child_declaration_blocks(current_list)
+    return current_list
   
+  def find_parent_declarations(self, current_list=[]):
+    if self.has_parent():
+      if isinstance(self.parent, n_Declaration):
+        current_list.append(self.parent)    
+      return self.parent.find_parent_declarations(current_list)
+    return current_list
+    
   def describe_hierarchy(self, level=0, strings=[]):
     strings.append("    " * level + str(self) + " >>> %d child nodes" % ( len(self.children), ))
     
@@ -37,50 +52,17 @@ class SkidmarkHierarchy(object):
         strings.append("    " * (level + 1), " * " + str(child))
     return strings
 
+
 class n_Declaration(SkidmarkHierarchy):
   def __init__(self, parent):
     SkidmarkHierarchy.__init__(self, parent)
     self.selectors = []
     self.declarationblock = None
-
-  def __repr__(self):
-    return "__dec__"
-    
-  def _represent(self):
-    # We have a single declaration block, but the properties from this declaration
-    # block may be other n_Declaration objects. Those need to be handled here. We need
-    # to recurse through ALL the children to identify the whole tree in order
-    # to identify all elements at play.
-    
-    declarations = list(set(self._retrieve_declaration_tree()))
-    return "\n".join(declarations)
   
-  def _retrieve_declaration_tree(self, selectors=[], current_declarations=[]):
-    # Returns a list of declarations
-    properties = []
-    
-    for property in self.declarationblock.properties:
-      if isinstance(property, n_Declaration):
-        current_declarations.extend(property._retrieve_declaration_tree(selectors + self.selectors, current_declarations))
-      else:
-        properties.append(property)
-    
-    if properties:
-      current = [ selector._represent() for selector in selectors ]
-      passed = [ selector._represent() for selector in self.selectors ]
-      
-      all_selectors = []
-      if current:
-        for c in current:
-          for p in passed:
-            all_selectors.append(c + " " + p)
-      else:
-        all_selectors = passed
-      
-      declaration = "%s { %s; }" % ( ", ".join(all_selectors), "; ".join(properties) )
-      current_declarations.append(declaration)
-    
-    return current_declarations
+  def iter_selectors(self):
+    for selector in self.selectors:
+      yield selector
+    return
   
   def add_selectors(self, selectors):
     self.selectors.extend(selectors)
@@ -95,12 +77,9 @@ class n_Selector(SkidmarkHierarchy):
   def __init__(self, parent, selector):
     SkidmarkHierarchy.__init__(self, parent)
     self.selector = selector
-    
-  def _represent(self):
-    return self.selector
-    
+  
   def __repr__(self):
-    return "__sel__ >>> " + self._represent()
+    return "%s : %s" % ( SkidmarkHierarchy.__repr__(self), self.selector )
 
 
 class n_DeclarationBlock(SkidmarkHierarchy):
@@ -113,10 +92,3 @@ class n_DeclarationBlock(SkidmarkHierarchy):
   
   def add_property(self, property):
     self.properties.append(property)
-  
-  def _represent(self):
-    print "properties = ", self.properties
-    return "{}"
-  
-  def __repr__(self):
-    return "__blk__ >>> " + "; ".join(map(str, self.properties))

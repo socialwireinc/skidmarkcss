@@ -1,5 +1,6 @@
 # -*- coding: latin-1 -*-
 
+import itertools
 import re
 import pyPEG
 import skidmarklanguage
@@ -31,7 +32,7 @@ class SkidmarkCSS(object):
   def _log(self, s, leading=0):
     if not self.quiet:
       if type(leading) is int and leading:
-        print "%s%s" % ( "  " * leading, s )
+        print "%s%s" % ( "  " * (leading * 2), s )
       else:
         print s
     return
@@ -39,9 +40,10 @@ class SkidmarkCSS(object):
   def _parse_file(self):
     """Parses the data using pyPEG, according to the Skidmark Language definition"""
     
+    self._log("-" * 72)
     self._log("Loading '%s'" % ( self.s_infile, ))
-    
     self.src = self._get_file_src()
+    
     self._log("%ld bytes" % ( len(self.src), ), leading=1)
     self._log("Using pyPEG to obtain the AST", leading=1)
     return pyPEG.parseLine(self.src, skidmarklanguage.language, resultSoFar=[], skipWS=True)
@@ -69,21 +71,29 @@ class SkidmarkCSS(object):
     if tree_len != 1:
       raise UnrecognizedParsedTree("Root element should have a single element, not %d" % ( tree_len, ))
     
-    self._log("Processing AST")
+    self._log("\nWalking through the AST to create an object tree")
     data = self._process_node(tree[0])
+    self._log("Walking through as has completed")
     
-    self._log("")
-    self._log("DESCRIBING HIERARCHY")
-    self._log("")
-    
-    for node in data:
-      description = node.describe_hierarchy()
-    print "\n".join(description)
+    if not self.quiet:
+      self._log("\nGenerated the following hierarchy")
+      description = []
+      for node in data:
+        description = node.describe_hierarchy(0, description)
+      for desc in description:
+        self._log(desc, leading=1)
     
     css = self._generate_css(data)
+    if not self.quiet:
+      self._log("\nGenerated CSS")
+      for css_line in css:
+        self._log(css_line, leading=1)
     
     if self.s_outfile:
-      self._create_outfile(css)
+      self._create_outfile("\n".join(css))
+      
+    self._log("=" * 72)
+    self._log("Loading Completed")
     return data
     
   def _generate_css(self, tree):
@@ -93,15 +103,22 @@ class SkidmarkCSS(object):
     
     css = []
     for node in tree:
-      if isinstance(node, n_Declaration):
-        # We only expect this node at the top level!
-        css.append(node._represent())
-      else:
-        print 'NOOOOOOOOOOOOOOOOOOOOOOO'
-        print type(node)
-        print node
+      declaration_blocks = []
+      if isinstance(node, SkidmarkHierarchy):
+        declaration_blocks = node.find_child_declaration_blocks(declaration_blocks)
+        
+      for blk in declaration_blocks:
+        declarations = []
+        declarations = blk.find_parent_declarations(declarations)
+        declarations.reverse()
+        
+        selectors = []
+        for dec in declarations:
+          selectors.append([ selector.selector for selector in dec.selectors])
+        all_selectors = [ " ".join(s) for s in itertools.product(*selectors) ]
+        css.append("%s { %s; }" % ( ", ".join(all_selectors), "; ".join(blk.properties) ))
     
-    return "\n".join(css)
+    return css
     
   def _create_outfile(self, css_text):
     """Generates the output file (self.s_outfile)"""
@@ -113,26 +130,25 @@ class SkidmarkCSS(object):
   def _process_node(self, node, parent=None):
     """Process a single node from the AST"""
     
-    self.log_id = self.log_id + 1
-    
     node_len = len(node)
     if node_len != 2:
       raise UnrecognizedParsedTree("Nodes should only have 2 elements, not %d: %s" % ( node_len, str(node) ))
     
+    self.log_id += 1
     fn_name = "".join([ "_nodeprocessor_", node[0] ])
     self._log("@%s" % ( fn_name, ), leading=self.log_id)
     self._log("P = %s" % ( parent, ), leading=self.log_id)
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Node type is unimplemented: %s" % ( fn_name, ))
-      
+    
     processor_result = getattr(self, fn_name)(node[1], parent)
     self._log(">>> Generated '%s'" % ( processor_result, ), leading=self.log_id + 1)
     
     if isinstance(parent, SkidmarkHierarchy) and isinstance(processor_result, SkidmarkHierarchy):
       parent.add_child(processor_result)
     
-    self.log_id = self.log_id - 1
+    self.log_id -= 1
     return processor_result
   
   
@@ -143,7 +159,13 @@ class SkidmarkCSS(object):
   def _nodeprocessor_language(self, data, parent):
     declarations = []
     for node_data in data:
-      declarations.append(self._process_node(node_data))
+      node = self._process_node(node_data)
+      
+      if type(node) is str and not node:
+        # Will usually happen in comments were in the source
+        continue
+      
+      declarations.append(node)
     return declarations
   
   def _nodeprocessor_declaration(self, data, parent):
@@ -161,8 +183,16 @@ class SkidmarkCSS(object):
     return oDeclaration
   
   def _nodeprocessor_selector(self, data, parent):
+    selector_parts = self._nodepprocessor_heler_selector(data)
+    return n_Selector(parent, " ".join(selector_parts))
+    
+  def _nodepprocessor_heler_selector(self, data):
     selector_parts = []
-    for selector_type, selector_item in data:
+    
+    while data:
+      current_element = data.pop(0)
+      selector_type, selector_item = current_element
+      
       if selector_type == "element_name":
         selector_parts.append(selector_item)
       elif selector_type == "pseudo":
@@ -171,17 +201,21 @@ class SkidmarkCSS(object):
             selector_parts.append(":" + pseudo_item)
           elif pseudo_type == "function":
             raise Unimplemented("%s has not yet been implemented" % ( str(selector_item), ))
+      elif selector_type == "combinator":
+        selector_parts.append("".join(selector_item))
+      elif  selector_type == "selector":
+        selector_parts.extend(self._nodepprocessor_heler_selector(selector_item))
       else:
-        raise UnrecognizedSelector(selector_type)
-        
-    return n_Selector(parent, "".join(selector_parts))
+        raise UnrecognizedSelector(selector_type + ":" + str(selector_item))
+      
+    return selector_parts
   
   def _nodeprocessor_declarationblock(self, data, parent):
     oDeclarationBlock = n_DeclarationBlock(parent)
     
     for node_data in data:
       node_result = self._process_node(node_data, oDeclarationBlock)
-      if node_result and not isinstance(node_result, SkidmarkHierarchy):
+      if node_result and type(node_result) is str:
         oDeclarationBlock.add_property(node_result)
     
     return oDeclarationBlock
@@ -215,7 +249,7 @@ class SkidmarkCSS(object):
     directive_result = getattr(self, fn_name)(parent, *param_list)
     return directive_result
   
-  def _nodeprocessor_comment(self, data):
+  def _nodeprocessor_comment(self, data, parent):
     return ""
   
   
@@ -224,6 +258,9 @@ class SkidmarkCSS(object):
   #
   
   def _directive_include(self, parent, filename):
+    """Include a seperate file, inline, as if all the lines were local
+    Returns the processed tree (list) of the parsed AST"""
+    
     if type(filename) is str:
       if filename.startswith('"') and filename.endswith('"'):
         filename = filename[1:-1]
@@ -231,16 +268,21 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(filename, s_outfile=None, quiet=True)
-      return "\n".join(sm.get_processed_tree())
-    return ""
+      sm = SkidmarkCSS(filename, s_outfile=None, quiet=False)
+      tree = sm.get_processed_tree()
+      if tree:
+        for branch in tree:
+          branch.parent = parent
+          if parent:
+            parent.add_child(branch)
+        return tree
+    return []
   
 # ----------------------------------------------------------------------------
 
 if __name__ == '__main__':
   try:
     sm = SkidmarkCSS("sample.smcss", s_outfile="sample.css", quiet=False)
-    #print "\n".join(sm.get_processed_tree())
   except:
     print "=" * 72
     try:

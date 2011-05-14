@@ -1,8 +1,29 @@
-a, b {
-  font-size: 11px;
-  ul {
-    font-family: fixed;
-    li { display: inline; }
-  }
-  font-weight: bold;
+* {
+    font-family: arial, helvetica, "some font", sans-serif;
+    font-size: 12px;
+}
+
+/* comment */
+
+a:link,
+a:visited {
+    color: #333399;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+a:hover,
+a:focus {
+    text-decoration: underlined;
+}
+
+ul {
+    @include(sample-ul.smcss);
+    em {
+        font-weight: bold;
+    }
+    
+    li {
+        color: green;
+    }
 }
