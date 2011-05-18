@@ -48,7 +48,7 @@ def param():
   return rec(r"[^,)]*")
 
 def comment():
-  return "/*", rec(r"[^*]*"), "*/"
+  return rec(r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/")
 
 def pseudo():
   return ":", [ function, ident ]
