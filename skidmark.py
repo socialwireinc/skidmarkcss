@@ -78,7 +78,7 @@ class SkidmarkCSS(object):
   def _process(self):
     """Processes the AST that has been generated in __init__"""
     
-    tree, remainder = self.ast
+    tree, remainder = self.ast    
     if remainder.strip():
       error_line = 1 + self.src.rstrip().count("\n") - remainder.count("\n")
       raise ErrorInFile("Error parsing '%s'\nLine %d: %s" % ( self.s_infile, error_line, remainder.strip().split("\n")[0] ))
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     except UnrecognizedSelector, e:
       print e
     except FileNotFound, e:
-      print e
+      print "File Not Found: " + str(e)
     except Exception, e:
       raise
     finally:
