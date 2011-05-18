@@ -1,10 +1,12 @@
 # -*- coding: latin-1 -*-
 
 import itertools
-import re
 import pyPEG
-import skidmarklanguage
+import re
+import sys
+import time
 
+import skidmarklanguage
 from skidmarknodes import *
 
 class FileNotFound(Exception): pass
@@ -15,16 +17,25 @@ class ErrorInFile(Exception): pass
 class UnexpectedTreeFormat(Exception): pass
 
 class SkidmarkCSS(object):
-  def __init__(self, s_infile, s_outfile="outfile.css", quiet=False):
+  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
+    
+    start_time = time.time()
     
     self.s_infile = s_infile
     self.s_outfile = s_outfile
-    self.quiet = quiet
+    self.verbose = verbose
+    self.printcss = printcss
     self.log_id = 0
     self.src = ""
     self.ast = self._parse_file()
     self.processed_tree = self._process()
+    
+    if timer:
+      self.verbose = True
+      self._log("Elapsed Time: %.04f" % ( time.time() - start_time, ))
+      self.verbose = verbose
+    
     return
     
   def get_processed_tree(self):
@@ -35,7 +46,7 @@ class SkidmarkCSS(object):
   def _log(self, s, leading=0):
     """Print strings to the screen, for debugging"""
     
-    if not self.quiet:
+    if self.verbose:
       if type(leading) is int and leading:
         print "%s%s" % ( "  " * (leading * 2), s )
       else:
@@ -80,7 +91,7 @@ class SkidmarkCSS(object):
     data = self._process_node(tree[0])
     self._log("Walking through as has completed")
     
-    if not self.quiet:
+    if self.verbose:
       self._log("\nGenerated the following hierarchy")
       description = []
       for node in data:
@@ -89,13 +100,12 @@ class SkidmarkCSS(object):
         self._log(desc, leading=1)
     
     css = self._generate_css(data)
-    if not self.quiet:
+    if self.verbose:
       self._log("\nGenerated CSS")
       for css_line in css:
         self._log(css_line, leading=1)
     
-    if self.s_outfile:
-      self._create_outfile("\n".join(css))
+    self._create_outfile("\n".join(css))
       
     self._log("=" * 72)
     self._log("Loading Completed")
@@ -131,8 +141,14 @@ class SkidmarkCSS(object):
   def _create_outfile(self, css_text):
     """Generates the output file (self.s_outfile)"""
     
-    self._log("Generating %s" % ( self.s_outfile, ))
-    open(self.s_outfile, "wt").write(css_text)
+    self._log("Generating %s" % ( self.s_outfile or "CSS to stdout", ))
+    
+    if self.s_outfile:
+      open(self.s_outfile, "wt").write(css_text)
+    
+    if self.printcss:
+      sys.stdout.write(css_text + "\n")
+    
     return
   
   def _process_node(self, node, parent=None):
@@ -312,7 +328,7 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(filename, s_outfile=None, quiet=self.quiet)
+      sm = SkidmarkCSS(filename, s_outfile=None, verbose=self.verbose)
       tree = sm.get_processed_tree()
       if tree:
         for branch in tree:
@@ -324,9 +340,36 @@ class SkidmarkCSS(object):
   
 # ----------------------------------------------------------------------------
 
+def get_arguments():
+  import argparse
+  
+  arg_parser = argparse.ArgumentParser(
+    description="Leave your mark on the web using SkidmarkCSS",
+    epilog="Leaving a trace since 2011",
+    add_help=True
+  )
+  arg_parser.add_argument("-i", "--input", dest="infile", help="The input file", nargs=1)
+  arg_parser.add_argument("-o", "--output", dest="outfile", help="The output file", nargs=1)
+  arg_parser.add_argument("-v", "--verbose", dest="verbose", help="Display detailed information", action="store_true")
+  arg_parser.add_argument("-p", "--printcss", dest="printcss", help="Output the final CSS to stdout", action="store_true")
+  arg_parser.add_argument("-t", "--timer", dest="timer", help="Display timer information", action="store_true")
+  
+  return arg_parser.parse_args()
+
 if __name__ == '__main__':
+  args = get_arguments()
+  
+  infile = args.infile and args.infile[0] or None
+  outfile = args.outfile and args.outfile[0] or None
+  
+  if not args.printcss and not outfile:
+    args.printcss = True
+
+  if not infile:
+    raise Exception("An input file is required, use -h for help")
+  
   try:
-    sm = SkidmarkCSS("sample.smcss", s_outfile="sample.css", quiet=False)
+    sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss)
   except:
     print "=" * 72
     try:
