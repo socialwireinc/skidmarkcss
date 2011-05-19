@@ -121,6 +121,10 @@ class SkidmarkCSS(object):
     
     css = []
     for node in tree:
+      if isinstance(node, n_TextNode):
+        css.append(node.text)
+        continue
+      
       declaration_blocks = []
       if isinstance(node, SkidmarkHierarchy):
         declaration_blocks = node.find_child_declaration_blocks(declaration_blocks)
@@ -311,6 +315,11 @@ class SkidmarkCSS(object):
     """Node Processor: comment"""
     
     return ""
+    
+  def _nodeprocessor_import_rule(self, data, parent):
+    """Processor for the '@import url();' rule"""
+    
+    return n_TextNode(parent, data)
   
   
   #

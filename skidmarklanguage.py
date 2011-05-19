@@ -23,6 +23,9 @@ t_class = "\\." + t_ident
 
 rec = re.compile
 
+def import_rule():
+  return rec("\@import\s+url\s*[^;]*;")
+
 def hash():
   return rec(t_hash)
 
@@ -90,5 +93,5 @@ def declaration():
   return full_selector(), declarationblock
   
 def language():
-  return ZERO_OR_MORE, [ declaration, directive, comment ]
+  return ZERO_OR_MORE, [ import_rule, declaration, directive, comment ]
 

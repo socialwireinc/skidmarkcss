@@ -126,3 +126,25 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     """Add a property to the object"""
     
     self.properties.append(property)
+
+class n_TextNode(SkidmarkHierarchy):
+  """Defines a text node.
+  A text node is final, it may not have any children."""
+  
+  def __init__(self, parent, text):
+    SkidmarkHierarchy.__init__(self, parent)
+    self.text = text
+  
+  def __nonzero__(self):
+    """The object is considered non-zero if its text is considered non-zero"""
+    
+    if self.text:
+      return True
+    return False
+    
+  def __repr__(self):
+    return "%s : %s" % ( SkidmarkHierarchy.__repr__(self), self.text )
+  
+  def add_child(self, child):
+    raise Exception("%s.add_child() is not legal, a text node may not have any children" % ( self.__class__.__name__, ))
+
