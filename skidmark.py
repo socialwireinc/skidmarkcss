@@ -16,8 +16,30 @@ class Unimplemented(Exception): pass
 class ErrorInFile(Exception): pass
 class UnexpectedTreeFormat(Exception): pass
 
+CSS_OUTPUT_COMPRESSED = 0
+CSS_OUTPUT_COMPACT = 1
+CSS_OUTPUT_CLEAN = 2
+
+OUTPUT_TEMPLATE_DECLARATION = {
+  CSS_OUTPUT_COMPRESSED : "%s{%s;}",
+  CSS_OUTPUT_COMPACT : "%s { %s; }",
+  CSS_OUTPUT_CLEAN : "%s {\n    %s;\n}\n"
+}
+
+OUTPUT_TEMPLATE_SELECTOR_SEPARATORS = {
+  CSS_OUTPUT_COMPRESSED : ",",
+  CSS_OUTPUT_COMPACT : ", ",
+  CSS_OUTPUT_CLEAN : ",\n"
+}
+
+OUTPUT_TEMPLATE_PROPERTY_SEPARATORS = {
+  CSS_OUTPUT_COMPRESSED : ";",
+  CSS_OUTPUT_COMPACT : "; ",
+  CSS_OUTPUT_CLEAN : ";\n    "
+}
+
 class SkidmarkCSS(object):
-  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False):
+  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     
     start_time = time.time()
@@ -26,6 +48,7 @@ class SkidmarkCSS(object):
     self.s_outfile = s_outfile
     self.verbose = verbose
     self.printcss = printcss
+    self.output_format = output_format
     self.log_id = 0
     self.src = ""
     self.ast = self._parse_file()
@@ -137,10 +160,37 @@ class SkidmarkCSS(object):
         selectors = []
         for dec in declarations:
           selectors.append([ selector.selector for selector in dec.selectors])
-        all_selectors = [ " ".join(s) for s in itertools.product(*selectors) ]
-        css.append("%s { %s; }" % ( ", ".join(all_selectors), "; ".join(blk.properties) ))
+          
+        all_selectors = [ " ".join(s) for s in self._simplyfy_selectos(itertools.product(*selectors)) ]
+        
+        css.append(OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
+          OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
+          OUTPUT_TEMPLATE_PROPERTY_SEPARATORS[self.output_format].join(blk.properties)
+        ))
     
     return css
+  
+  def _simplyfy_selectos(self, selectors):
+    """Runs to the list of selectors and simplifies anything can can be simplified.
+    The simplest example is to transfer the "&" selectors to its parent."""
+    
+    if not selectors:
+      return selectors
+    
+    groups = []
+    
+    selectors = list(selectors)
+    for selector_group in selectors:
+      selector_list = [ selector_group[0] ]
+      for selector in selector_group[1:]:
+        if selector.startswith("&"):
+          selector_list[-1] = "%s%s" % ( selector_list[-1], selector[1:] )
+        else:
+          selector_list.append(selector)
+      
+      groups.append(selector_list)
+    
+    return groups
     
   def _create_outfile(self, css_text):
     """Generates the output file (self.s_outfile)"""
@@ -362,6 +412,9 @@ def get_arguments():
   arg_parser.add_argument("-v", "--verbose", dest="verbose", help="Display detailed information", action="store_true")
   arg_parser.add_argument("-p", "--printcss", dest="printcss", help="Output the final CSS to stdout", action="store_true")
   arg_parser.add_argument("-t", "--timer", dest="timer", help="Display timer information", action="store_true")
+  arg_parser.add_argument("--clean", dest="format", help="Outputs the CSS in 'clean' format", action="store_const", const=CSS_OUTPUT_CLEAN)
+  arg_parser.add_argument("--compact", dest="format", help="Outputs the CSS in 'compact' format (default)", action="store_const", const=CSS_OUTPUT_COMPACT)
+  arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=CSS_OUTPUT_COMPRESSED)
   
   return arg_parser.parse_args()
 
@@ -371,6 +424,11 @@ if __name__ == '__main__':
   infile = args.infile and args.infile[0] or None
   outfile = args.outfile and args.outfile[0] or None
   
+  if args.format in (CSS_OUTPUT_COMPRESSED, CSS_OUTPUT_COMPACT, CSS_OUTPUT_CLEAN):
+    output_format = args.format
+  else:
+    output_format = CSS_OUTPUT_COMPACT
+  
   if not args.printcss and not outfile:
     args.printcss = True
 
@@ -378,7 +436,7 @@ if __name__ == '__main__':
     raise Exception("An input file is required, use -h for help")
   
   try:
-    sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss)
+    sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss, output_format=output_format)
   except:
     print "=" * 72
     try:

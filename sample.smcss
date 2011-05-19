@@ -1,9 +1,9 @@
+@import url("test.css");
+
 * {
     font-family: arial, helvetica, "some font", sans-serif;
     font-size: 12px;
 }
-
-/* comment */
 
 a:link,
 a:visited {
@@ -19,6 +19,8 @@ a:focus {
 
 ul {
     @include(sample-ul.smcss);
+    
+    &.test { color: red; }
     
     em {
         font-weight: bold;
