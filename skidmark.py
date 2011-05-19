@@ -38,6 +38,13 @@ OUTPUT_TEMPLATE_PROPERTY_SEPARATORS = {
   CSS_OUTPUT_CLEAN : ";\n    "
 }
 
+OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
+  CSS_OUTPUT_COMPRESSED : ":",
+  CSS_OUTPUT_COMPACT : ": ",
+  CSS_OUTPUT_CLEAN : ": "
+}
+
+
 class SkidmarkCSS(object):
   def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
@@ -340,7 +347,7 @@ class SkidmarkCSS(object):
         
     if not name or not value:
       raise UnrecognizedParsedTree("Failure during property parsing: %s" % ( str(data), ))
-    return "%s: %s" % ( name, value )
+    return "%s%s%s" % ( name, OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format], value )
   
   def _nodeprocessor_property_unterminated(self, data, parent):
     """Node Processor: property_unterminated"""
