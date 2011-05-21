@@ -56,11 +56,14 @@ def comment():
 def pseudo():
   return ":", [ function, ident ]
 
+def css3pseudo():
+  return ":", pseudo()
+
 def attrib():
   return "[", ident, ZERO_OR_ONE, ("=", [ ident, string ]), "]"
 
 def simple_selector():
-  return [ (element_name, ZERO_OR_MORE, [hash, class_, attrib, pseudo]), (ONE_OR_MORE, [hash, class_, attrib, pseudo]) ]
+  return [ (element_name, ZERO_OR_MORE, [hash, class_, attrib, pseudo, css3pseudo]), (ONE_OR_MORE, [hash, class_, attrib, pseudo, css3pseudo]) ]
 
 def combinator():
   return [ rec('[+>]') ]

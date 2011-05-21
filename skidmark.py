@@ -44,9 +44,8 @@ OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
   CSS_OUTPUT_CLEAN : ": "
 }
 
-
 class SkidmarkCSS(object):
-  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED):
+  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     
     start_time = time.time()
@@ -56,6 +55,7 @@ class SkidmarkCSS(object):
     self.verbose = verbose
     self.printcss = printcss
     self.output_format = output_format
+    self.show_hierarchy = show_hierarchy
     self.log_id = 0
     self.src = ""
     self.ast = self._parse_file()
@@ -121,13 +121,16 @@ class SkidmarkCSS(object):
     data = self._process_node(tree[0])
     self._log("Walking through as has completed")
     
-    if self.verbose:
+    if self.show_hierarchy:
+      verbose_mode = self.verbose
+      self.verbose = True
       self._log("\nGenerated the following hierarchy")
       description = []
       for node in data:
         description = node.describe_hierarchy(0, description)
       for desc in description:
         self._log(desc, leading=1)
+      self.verbose = verbose_mode
     
     css = self._generate_css(data)
     if self.verbose:
@@ -293,13 +296,18 @@ class SkidmarkCSS(object):
       
       if selector_type == "element_name":
         selector_parts.append(selector_item)
-      elif selector_type == "pseudo":
+      elif selector_type in ("pseudo", "css3pseudo"):
+        if selector_type == "css3pseudo":
+          pseudo_str = "::"
+        else:
+          pseudo_str = ":"
+        
         for pseudo_type, pseudo_item in selector_item:
           if pseudo_type == "ident":
             if selector_parts:
-              selector_parts[-1] = "%s:%s" % ( selector_parts[-1], pseudo_item )
+              selector_parts[-1] = "%s%s%s" % ( selector_parts[-1], pseudo_str, pseudo_item )
             else:
-              selector_parts.append(":" + pseudo_item)
+              selector_parts.append(pseudo_str + pseudo_item)
           elif pseudo_type == "function":
             raise Unimplemented("%s has not yet been implemented" % ( str(selector_item), ))
       elif selector_type == "class_":
@@ -419,6 +427,7 @@ def get_arguments():
   arg_parser.add_argument("-v", "--verbose", dest="verbose", help="Display detailed information", action="store_true")
   arg_parser.add_argument("-p", "--printcss", dest="printcss", help="Output the final CSS to stdout", action="store_true")
   arg_parser.add_argument("-t", "--timer", dest="timer", help="Display timer information", action="store_true")
+  arg_parser.add_argument("--hierarchy", dest="hierarchy", help="Display the object hierarchy representing the CSS", action="store_true")
   arg_parser.add_argument("--clean", dest="format", help="Outputs the CSS in 'clean' format", action="store_const", const=CSS_OUTPUT_CLEAN)
   arg_parser.add_argument("--compact", dest="format", help="Outputs the CSS in 'compact' format (default)", action="store_const", const=CSS_OUTPUT_COMPACT)
   arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=CSS_OUTPUT_COMPRESSED)
@@ -443,7 +452,7 @@ if __name__ == '__main__':
     raise Exception("An input file is required, use -h for help")
   
   try:
-    sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss, output_format=output_format)
+    sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss, output_format=output_format, show_hierarchy=args.hierarchy)
   except:
     print "=" * 72
     try:
