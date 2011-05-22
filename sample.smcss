@@ -1,5 +1,14 @@
 @import url("test.css");
 
+@@template box-model($width, $color) {
+  color: $color;
+  width: $width;
+  height: 100%;
+  &.funny {
+    color: black;
+  }
+}
+
 * { font-family: arial, helvetica, "some font", sans-serif; font-size: 12px; }
 a:link, a:visited { color: #333399; font-weight: bold; text-decoration: none; }
 
@@ -11,5 +20,10 @@ ul {
 }
 
 p::before {
-  line-height:20px;
+  line-height: 20px;
+  @@use box-model(200px, blue);
+}
+
+p::after {
+  @@use box-model(350px, red);
 }

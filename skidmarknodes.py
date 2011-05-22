@@ -126,6 +126,13 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     """Add a property to the object"""
     
     self.properties.append(property)
+  
+  def clone(self, parent):
+    db = n_DeclarationBlock(parent)
+    for property in self.properties:
+      db.add_property(property)
+    return db
+
 
 class n_TextNode(SkidmarkHierarchy):
   """Defines a text node.
@@ -148,3 +155,20 @@ class n_TextNode(SkidmarkHierarchy):
   def add_child(self, child):
     raise Exception("%s.add_child() is not legal, a text node may not have any children" % ( self.__class__.__name__, ))
 
+
+class n_Template(SkidmarkHierarchy):
+  """Defines a template"""
+  
+  def __init__(self, parent, name, params, declarationblock):
+    SkidmarkHierarchy.__init__(self, parent)
+    self.name = name
+    self.params = params
+    self.declarationblock = declarationblock
+  
+  def __repr__(self):
+    return "%s : %s" % ( SkidmarkHierarchy.__repr__(self), self.name )
+  
+  def params_are_valid(self, params):
+    if len(params) != len(self.params):
+      return False
+    return True
