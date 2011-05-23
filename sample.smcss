@@ -1,29 +1,16 @@
-@import url("test.css");
-
 @@template box-model($width, $color) {
   color: $color;
   width: $width;
-  height: 100%;
-  &.funny {
-    color: black;
-  }
+  border: 1px outset $color;
+  &.question { border-width: 3px; }
+  &.info { border-width: 2px; }
 }
 
-* { font-family: arial, helvetica, "some font", sans-serif; font-size: 12px; }
-a:link, a:visited { color: #333399; font-weight: bold; text-decoration: none; }
-
-ul {
-  @include(sample-ul.smcss);
-  &.test { color: red; }
-  em { font-weight: bold; }
-  li { color: green; }
-}
-
-p::before {
+p {
   line-height: 20px;
+  width: 400px;
   @@use box-model(200px, blue);
+  height: 800px;
 }
 
-p::after {
-  @@use box-model(350px, red);
-}
+div { @@use box-model(480px, red); }

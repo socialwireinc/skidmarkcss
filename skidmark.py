@@ -409,11 +409,6 @@ class SkidmarkCSS(object):
     """Indicate that we with to use a template.
     The template must exist before @@use may be called"""
     
-    # At the time of coding this function, the parent could ONLY be a declaration
-    # block. Because of thise, I assume that this is the case and blindfully
-    # do this: 'parent.properties.extend(properties)'. If '@@use' eventually
-    # is allowed elsewhere, then this needs to be updated.
-    
     template_name = data[0]
     params = [ parameter[1] or "" for parameter in data[1:] ]
 
@@ -428,11 +423,15 @@ class SkidmarkCSS(object):
       
     # Verify that parameters
     if not template.params_are_valid(params):
-      # TODO: can we identify the line number where this occured?
+      # It would be ideal if we could identify the line number, but I don't think it's possible with a properly parsed pypeg file
       raise InvalidTemplateUse("The '%s' template expects %d parameter%s, not %d" % ( template_name, len(template.params), len(template.params) != 1 and "s" or "", len(params) ))
     
     # Clone the declaration block so that we do not alter the template
     dec_block = template.declarationblock.clone(parent)
+    
+    # Transfer the children to the proper parent
+    for child in dec_block.iter_children():
+      parent.add_child(child)
     
     # Everything is good, replace all the params
     param_substitutions = zip(template.params, params)
@@ -450,13 +449,9 @@ class SkidmarkCSS(object):
         properties.append(property)
     
     # Add the properties to the parent
-    # TODO: we need to overwrite parents' properties who are duplicates. At the
-    # moment are are outputting the property twice.
-    parent.properties.extend(properties)
-    
-    # TODO: The template's children all need to be cloned (recursive, down the
-    # tree of all children). Without this we can only inherit the first-level
-    # property definitions
+    if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
+      for property in properties:
+        parent.add_property(property)
         
     return ""
   

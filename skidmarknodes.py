@@ -1,5 +1,7 @@
 # -*- coding: latin-1 -*-
 
+import copy
+
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
   Every skidmark object need to derive from this object."""
@@ -11,7 +13,28 @@ class SkidmarkHierarchy(object):
     
   def __repr__(self):
     return "%s__%d" % ( self.__class__.__name__, id(self) )
+  
+  def clone(self, parent):
+    """Clone this object, along with all children in the tree"""
     
+    cloned_object = copy.deepcopy(self)
+    cloned_object._set_parent_child_relationship(parent)
+    return cloned_object
+  
+  def _set_parent_child_relationship(self, parent):
+    """Resets the parents to represent the tree that is passed.
+    This is required after a clone because the children are properly
+    inherited, but each children is pointing to its previous parent.
+    This function runs down the children list and sets the proper
+    parent."""
+    
+    for child in self.iter_children():
+      if isinstance(child, SkidmarkHierarchy):
+        child.parent = parent
+        child._set_parent_child_relationship(child)
+    
+    return None
+  
   def has_parent(self):
     """Returns True or False (it has a parent or not)"""
     
@@ -125,13 +148,22 @@ class n_DeclarationBlock(SkidmarkHierarchy):
   def add_property(self, property):
     """Add a property to the object"""
     
+    # Verify if this property already exists, if it does we need to pop it out
+    # before appending this new one (this one will essentially crush the previous
+    # entry so let's kep the output CSS as clean as possible.
+    
+    def get_property_name(prop):
+      return prop.split(":", 1)[0].strip()
+    
+    property_name = get_property_name(property)
+    property_names = [ get_property_name(prop) for prop in self.properties ]
+    
+    # If it already exists in the list, remove the original
+    if property_name in property_names:
+      property_position = property_names.index(property_name)
+      self.properties.pop(property_position)
+      
     self.properties.append(property)
-  
-  def clone(self, parent):
-    db = n_DeclarationBlock(parent)
-    for property in self.properties:
-      db.add_property(property)
-    return db
 
 
 class n_TextNode(SkidmarkHierarchy):
