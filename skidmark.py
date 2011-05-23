@@ -15,6 +15,10 @@ class UnrecognizedSelector(Exception): pass
 class Unimplemented(Exception): pass
 class ErrorInFile(Exception): pass
 class UnexpectedTreeFormat(Exception): pass
+class UndefinedTemplate(Exception): pass
+class InvalidTemplateUse(Exception): pass
+
+TEMPLATES = {}
 
 CSS_OUTPUT_COMPRESSED = 0
 CSS_OUTPUT_COMPACT = 1
@@ -142,6 +146,7 @@ class SkidmarkCSS(object):
       
     self._log("=" * 72)
     self._log("Loading Completed")
+    
     return data
     
   def _generate_css(self, tree):
@@ -386,6 +391,69 @@ class SkidmarkCSS(object):
     
     return n_TextNode(parent, data)
   
+  def _nodeprocessor_template(self, data, parent):
+    """Define a template that may be reused several times throughout this CSS"""
+    
+    template_name = data[0]
+    params = [ parameter[1] or "" for parameter in data[1:-1] ]
+    
+    if len(params) == 1 and not params[0]:
+      params.pop(0)
+    
+    dec_block = self._process_node(data[-1], parent=None)
+    
+    TEMPLATES[template_name] = n_Template(None, template_name, params, dec_block)
+    return ""
+  
+  def _nodeprocessor_use(self, data, parent):
+    """Indicate that we with to use a template.
+    The template must exist before @@use may be called"""
+    
+    template_name = data[0]
+    params = [ parameter[1] or "" for parameter in data[1:] ]
+
+    if len(params) == 1 and not params[0]:
+      params.pop(0)
+    
+    template = TEMPLATES.get(template_name)
+    
+    # Verify that this template has been defined
+    if not template:
+      raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
+      
+    # Verify that parameters
+    if not template.params_are_valid(params):
+      # It would be ideal if we could identify the line number, but I don't think it's possible with a properly parsed pypeg file
+      raise InvalidTemplateUse("The '%s' template expects %d parameter%s, not %d" % ( template_name, len(template.params), len(template.params) != 1 and "s" or "", len(params) ))
+    
+    # Clone the declaration block so that we do not alter the template
+    dec_block = template.declarationblock.clone(parent)
+    
+    # Transfer the children to the proper parent
+    for child in dec_block.iter_children():
+      parent.add_child(child)
+    
+    # Everything is good, replace all the params
+    param_substitutions = zip(template.params, params)
+
+    properties = []
+    for property in dec_block.properties:
+      p = ""
+      for search, replace in param_substitutions:
+        pr = property.replace(search, replace)
+        if pr != property:
+          p = pr
+      if p:
+        properties.append(p)
+      else:
+        properties.append(property)
+    
+    # Add the properties to the parent
+    if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
+      for property in properties:
+        parent.add_property(property)
+        
+    return ""
   
   #
   # Directives
@@ -458,15 +526,21 @@ if __name__ == '__main__':
     try:
       raise
     except Unimplemented, e:
-      print e
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
     except UnrecognizedParsedTree, e:
-      print e
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
+    except UnexpectedTreeFormat, e:
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
     except ErrorInFile, e:
-      print e
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
     except UnrecognizedSelector, e:
-      print e
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
     except FileNotFound, e:
-      print "File Not Found: " + str(e)
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
+    except UndefinedTemplate, e:
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
+    except InvalidTemplateUse, e:
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
     except Exception, e:
       raise
     finally:

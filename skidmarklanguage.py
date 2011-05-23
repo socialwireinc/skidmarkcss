@@ -23,6 +23,12 @@ t_class = "\\." + t_ident
 
 rec = re.compile
 
+def template():
+  return "@@template ", function(), declarationblock
+  
+def use():
+  return "@@use ", function(), ";"
+  
 def import_rule():
   return rec("\@import\s+url\s*[^;]*;")
 
@@ -48,6 +54,8 @@ def param_list():
   return ZERO_OR_ONE, param, ZERO_OR_MORE, (",", param)
   
 def param():
+  # FIX: Parameters may be within quotes
+  # (if the case where a comma needs to be in the text)
   return rec(r"[^,)]*")
 
 def comment():
@@ -90,11 +98,11 @@ def property_unterminated():
   return propertyname, ":", propertyvalue
 
 def declarationblock():
-  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration ], ZERO_OR_ONE, property_unterminated, "}"
+  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration, use ], ZERO_OR_ONE, property_unterminated, "}"
 
 def declaration():
   return full_selector(), declarationblock
   
 def language():
-  return ZERO_OR_MORE, [ import_rule, declaration, directive, comment ]
+  return ZERO_OR_MORE, [ import_rule, declaration, directive, comment, template ]
 
