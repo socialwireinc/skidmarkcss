@@ -1,12 +1,14 @@
 @@template mm() {
   &.info {
     margin: 20px;
+    &.test { color: red;}
   }
 }
 
 @@template mm2() {
   &.info {
     padding: 20px;
+    @include(sample-ul.smcss);
   }
 }
 

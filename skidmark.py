@@ -49,7 +49,7 @@ OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
 }
 
 class SkidmarkCSS(object):
-  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False):
+  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, verbose_indent_level=0):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     
     start_time = time.time()
@@ -60,7 +60,7 @@ class SkidmarkCSS(object):
     self.printcss = printcss
     self.output_format = output_format
     self.show_hierarchy = show_hierarchy
-    self.log_id = 0
+    self.log_id = verbose_indent_level
     self.src = ""
     self.ast = self._parse_file()
     self.processed_tree = self._process()
@@ -77,16 +77,32 @@ class SkidmarkCSS(object):
     
     return self.processed_tree
   
-  def _log(self, s, leading=0):
+  def _log(self, s):
     """Print strings to the screen, for debugging"""
     
+    leading = self.log_id
+    
+    s = s.strip()
+    if not s:
+      return
+    
     if self.verbose:
+      single_leading_spacer = "    "
       if type(leading) is int and leading:
-        print "%s%s" % ( "  " * (leading * 2), s )
+        if "\n" in s:
+          s = "\n".join([ "%s%s" % ( single_leading_spacer * leading, s_cr ) for s_cr in s.split("\n") ])
+          print s
+        else:
+          print "%s%s" % ( single_leading_spacer * leading, s )
       else:
         print s
     return
     
+  def _update_log_indent(self, change):
+    if type(change) is int:
+      self.log_id += change
+    return self.log_id
+  
   def _parse_file(self):
     """Parses the data using pyPEG, according to the Skidmark Language definition"""
     
@@ -94,14 +110,19 @@ class SkidmarkCSS(object):
     self._log("Loading '%s'" % ( self.s_infile, ))
     self.src = self._get_file_src()
     
-    self._log("%ld bytes" % ( len(self.src), ), leading=1)
-    self._log("Using pyPEG to obtain the AST", leading=1)
+    self._update_log_indent(+1)
+    self._log("%ld bytes" % ( len(self.src), ))
+    self._log("Using pyPEG to obtain the AST")
+    self._update_log_indent(-1)
+    
     return pyPEG.parseLine(self.src, skidmarklanguage.language, resultSoFar=[], skipWS=True)
   
   def _get_file_src(self):
     """Reads the byte content of self.s_infile and returns it as a string"""
     
-    self._log("Reading file contents", leading=1)
+    self._update_log_indent(+1)
+    self._log("Reading file contents")
+    self._update_log_indent(-1)
     
     try:
       src = open(self.s_infile, "rb").read()
@@ -121,31 +142,38 @@ class SkidmarkCSS(object):
     if tree_len != 1:
       raise UnrecognizedParsedTree("Root element should have a single element, not %d" % ( tree_len, ))
     
-    self._log("\nWalking through the AST to create an object tree")
+    self._log("Walking through the AST to create an object tree")
     data = self._process_node(tree[0])
-    self._log("Walking through as has completed")
+    self._log("Walking through AST has completed")
     
     if self.show_hierarchy:
       verbose_mode = self.verbose
       self.verbose = True
-      self._log("\nGenerated the following hierarchy")
+      
+      self._log("Generated the following hierarchy")
       description = []
       for node in data:
-        description = node.describe_hierarchy(0, description)
-      for desc in description:
-        self._log(desc, leading=1)
+        description = node.describe_hierarchy(self.log_id, description)
+      
+      self._update_log_indent(+1)
+      self._log("\n".join(description))
+      self._update_log_indent(-1)
+      
       self.verbose = verbose_mode
     
     css = self._generate_css(data)
-    if self.verbose:
-      self._log("\nGenerated CSS")
+    if self.verbose and not self.printcss:
+      self._log("Generated CSS")
+      
+      self._update_log_indent(+1)
       for css_line in css:
-        self._log(css_line, leading=1)
-    
+        self._log(css_line)
+      self._update_log_indent(-1)
+      
     self._create_outfile("\n".join(css))
       
     self._log("=" * 72)
-    self._log("Loading Completed")
+    self._log("Completed processing %s" % ( self.s_infile, ))
     
     return data
     
@@ -210,10 +238,11 @@ class SkidmarkCSS(object):
   def _create_outfile(self, css_text):
     """Generates the output file (self.s_outfile)"""
     
-    self._log("Generating %s" % ( self.s_outfile or "CSS to stdout", ))
+    if self.s_outfile or self.printcss:
+      self._log("Generating %s" % ( self.s_outfile or "CSS to stdout", ))
     
     if self.s_outfile:
-      open(self.s_outfile, "wt").write(css_text)
+      open(self.s_outfile, "wt").write(css_text + "\n")
     
     if self.printcss:
       sys.stdout.write(css_text + "\n")
@@ -229,14 +258,16 @@ class SkidmarkCSS(object):
     
     self.log_id += 1
     fn_name = "".join([ "_nodeprocessor_", node[0] ])
-    self._log("@%s" % ( fn_name, ), leading=self.log_id)
-    self._log("P = %s" % ( parent, ), leading=self.log_id)
+    self._log("@%s" % ( fn_name, ))
+    self._log("P = %s" % ( parent, ))
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Node type is unimplemented: %s" % ( fn_name, ))
     
     processor_result = getattr(self, fn_name)(node[1], parent)
-    self._log(">>> Generated '%s'" % ( processor_result, ), leading=self.log_id + 1)
+    self._update_log_indent(+1)
+    self._log(">>> Generated %s" % ( processor_result or 'an empty result, discarding', ))
+    self._update_log_indent(-1)
     
     if type(processor_result) is list:
       for pr in processor_result:
@@ -390,7 +421,7 @@ class SkidmarkCSS(object):
     function_name, param_list = ( data[0], [ _[1].strip() for _ in data[1:] if _ and _[1] and _[1].strip() ] )
     fn_name = "".join([ "_directive_", function_name ])
     
-    self._log("%s" % ( fn_name ), leading=self.log_id)
+    self._log("%s" % ( fn_name ))
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Directive is unimplemented: %s" % ( fn_name, ))
@@ -487,7 +518,7 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(filename, s_outfile=None, verbose=self.verbose)
+      sm = SkidmarkCSS(filename, s_outfile=None, verbose=self.verbose, verbose_indent_level=self.log_id + 1)
       tree = sm.get_processed_tree()
       if tree:
         for branch in tree:
@@ -539,7 +570,7 @@ if __name__ == '__main__':
   try:
     sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss, output_format=output_format, show_hierarchy=args.hierarchy)
   except:
-    print "=" * 72
+    print "-=" * (72/2)
     try:
       raise
     except Unimplemented, e:
@@ -561,4 +592,4 @@ if __name__ == '__main__':
     except Exception, e:
       raise
     finally:
-      print "=" * 72
+      print "-=" * (72/2)
