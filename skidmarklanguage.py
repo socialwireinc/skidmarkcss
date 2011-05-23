@@ -68,8 +68,11 @@ def css3pseudo():
   return ":", pseudo()
 
 def attrib():
-  return "[", ident, ZERO_OR_ONE, ("=", [ ident, string ]), "]"
+  return "[", ident, ZERO_OR_ONE, (attrib_type, [ ident, string ]), "]"
 
+def attrib_type():
+  return rec("~?=")
+  
 def simple_selector():
   return [ (element_name, ZERO_OR_MORE, [hash, class_, attrib, pseudo, css3pseudo]), (ONE_OR_MORE, [hash, class_, attrib, pseudo, css3pseudo]) ]
 

@@ -294,6 +294,7 @@ class SkidmarkCSS(object):
     """Node Processor Helper Function: selector"""
     
     selector_parts = []
+    attribute = ""
     
     while data:
       current_element = data.pop(0)
@@ -329,10 +330,26 @@ class SkidmarkCSS(object):
         selector_parts[-1] = "%s%s" % ( selector_parts[-1], "".join(selector_item) )
       elif  selector_type == "selector":
         selector_parts.extend(self._nodepprocessor_helper_selector(selector_item))
+      elif selector_type == "attrib":
+        if len(selector_item) not in (1, 3) or selector_item[0][0] != "ident":
+          raise UnrecognizedSelector("Unrecognized value for an attrib: %s" % ( str(selector_item), ))
+        
+        attribute = selector_item[0][1]
+        for attrib_item in selector_item[1:]:
+          if attrib_item[0] in ("attrib_type", "ident", "string"):
+            attribute += attrib_item[1]
+          else:
+            raise UnrecognizedSelector("Unrecognized value for an attrib: %s" % ( str(selector_item), ))
       else:
         raise UnrecognizedSelector(selector_type + ":" + str(selector_item))
       
-    return selector_parts
+    # Join the attributes to the selector
+    if attribute:
+      parts = [ "%s[%s]" % ( sp, attribute ) for sp in selector_parts ]
+    else:
+      parts = selector_parts
+    
+    return parts
   
   def _nodeprocessor_declarationblock(self, data, parent):
     """Node Processor: declarationblock"""
