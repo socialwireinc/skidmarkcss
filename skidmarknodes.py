@@ -24,7 +24,7 @@ class SkidmarkHierarchy(object):
   def _set_parent_child_relationship(self, parent):
     """Resets the parents to represent the tree that is passed.
     This is required after a clone because the children are properly
-    inherited, but each children is pointing to its previous parent.
+    inherited, but each child is pointing to its previous parent.
     This function runs down the children list and sets the proper
     parent."""
     
