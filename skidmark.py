@@ -176,7 +176,7 @@ class SkidmarkCSS(object):
         for dec in declarations:
           selectors.append([ selector.selector for selector in dec.selectors])
           
-        all_selectors = [ " ".join(s) for s in self._simplyfy_selectos(itertools.product(*selectors)) ]
+        all_selectors = [ " ".join(s) for s in self._simplyfy_selectors(itertools.product(*selectors)) ]
         
         css.append(OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
           OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
@@ -185,7 +185,7 @@ class SkidmarkCSS(object):
     
     return css
   
-  def _simplyfy_selectos(self, selectors):
+  def _simplyfy_selectors(self, selectors):
     """Runs to the list of selectors and simplifies anything can can be simplified.
     The simplest example is to transfer the "&" selectors to its parent."""
     
