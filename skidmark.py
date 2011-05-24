@@ -66,6 +66,7 @@ class SkidmarkCSS(object):
     self.src = ""
     self.ast = self._parse_file()
     self.processed_tree = self._process()
+    self._process_output()
     
     if timer:
       self.verbose = True
@@ -147,6 +148,11 @@ class SkidmarkCSS(object):
     self._log("Walking through the AST to create an object tree")
     data = self._process_node(tree[0])
     self._log("Walking through AST has completed")
+    
+    return data
+  
+  def _process_output(self):    
+    data = self.get_processed_tree()
     
     if self.show_hierarchy:
       verbose_mode = self.verbose
