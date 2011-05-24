@@ -184,7 +184,30 @@ class SkidmarkCSS(object):
     self._log("Completed processing %s" % ( self.s_infile, ))
     
     return data
+  
+  def simplify_tree(self, tree):
+    declaration_blocks = []
     
+    for node in tree:
+      if isinstance(node, SkidmarkHierarchy):
+        declaration_blocks = node.find_child_declaration_blocks(declaration_blocks)
+    
+    property_groups = {}
+    
+    for db in declaration_blocks:
+      props = db.properties
+      props.sort()
+      key = "==".join(props)
+      property_groups.setdefault(key, [])
+      property_groups[key].append(db)
+    
+    # Eliminate the unique entries, keep the rest
+    duplicates = [ property_groups[key] for key in property_groups if len(property_groups[key]) > 1 ]
+    
+    # How do we merge?
+    
+    return tree
+  
   def _generate_css(self, tree):
     """Builds the output CSS
     Returns a list (each line of the CSS output)"""
