@@ -48,7 +48,12 @@ class SkidmarkHierarchy(object):
   def add_child(self, child):
     """Add a child to this object"""
     
-    self.children.append(child)
+    # Required because the 'include' method sets the parent/child relationships before
+    # passing the results back to the node_processor, which then handles the nodes. It 
+    # may happend that a child is added to the same parent a second time.
+    if not id(child) in [ id(c) for c in self.children ]:
+      self.children.append(child)
+    
     return child
     
   def iter_children(self):

@@ -1,0 +1,10 @@
+@@template box($width, $height, $bgcolor, $bordercolor) {
+  width: $width;
+  height: $height;
+  border: 1px solid $bordercolor;
+  background-color: $bgcolor;
+  
+  &.transparent {
+    opacity: 0.5;
+  }
+}
