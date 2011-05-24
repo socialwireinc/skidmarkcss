@@ -23,11 +23,12 @@ TEMPLATES = {}
 CSS_OUTPUT_COMPRESSED = 0
 CSS_OUTPUT_COMPACT = 1
 CSS_OUTPUT_CLEAN = 2
+SPACING_CLEAN = 2
 
 OUTPUT_TEMPLATE_DECLARATION = {
   CSS_OUTPUT_COMPRESSED : "%s{%s;}",
   CSS_OUTPUT_COMPACT : "%s { %s; }",
-  CSS_OUTPUT_CLEAN : "%s {\n    %s;\n}\n"
+  CSS_OUTPUT_CLEAN : "%%s {\n%s%%s;\n}\n" % ( " " * SPACING_CLEAN, )
 }
 
 OUTPUT_TEMPLATE_SELECTOR_SEPARATORS = {
@@ -39,7 +40,7 @@ OUTPUT_TEMPLATE_SELECTOR_SEPARATORS = {
 OUTPUT_TEMPLATE_PROPERTY_SEPARATORS = {
   CSS_OUTPUT_COMPRESSED : ";",
   CSS_OUTPUT_COMPACT : "; ",
-  CSS_OUTPUT_CLEAN : ";\n    "
+  CSS_OUTPUT_CLEAN : ";\n%s" % ( " " * SPACING_CLEAN, )
 }
 
 OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
@@ -60,6 +61,7 @@ class SkidmarkCSS(object):
     self.printcss = printcss
     self.output_format = output_format
     self.show_hierarchy = show_hierarchy
+    self.timer = timer
     self.log_id = verbose_indent_level
     self.src = ""
     self.ast = self._parse_file()
@@ -518,7 +520,14 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(filename, s_outfile=None, verbose=self.verbose, verbose_indent_level=self.log_id + 1)
+      sm = SkidmarkCSS(filename,
+                       s_outfile=None,
+                       output_format=self.output_format,
+                       timer=self.timer,
+                       show_hierarchy=self.show_hierarchy,
+                       verbose=self.verbose,
+                       verbose_indent_level=self.log_id + 1)
+      
       tree = sm.get_processed_tree()
       if tree:
         for branch in tree:
@@ -538,8 +547,9 @@ def get_arguments():
     epilog="Leaving a trace since 2011",
     add_help=True
   )
-  arg_parser.add_argument("-i", "--input", dest="infile", help="The input file", nargs=1)
-  arg_parser.add_argument("-o", "--output", dest="outfile", help="The output file", nargs=1)
+  
+  arg_parser.add_argument("-i", dest="infile", help="The input file", nargs=1, metavar="srcfile")
+  arg_parser.add_argument("-o", dest="outfile", help="The output file", nargs=1, metavar="dstfile")
   arg_parser.add_argument("-v", "--verbose", dest="verbose", help="Display detailed information", action="store_true")
   arg_parser.add_argument("-p", "--printcss", dest="printcss", help="Output the final CSS to stdout", action="store_true")
   arg_parser.add_argument("-t", "--timer", dest="timer", help="Display timer information", action="store_true")
