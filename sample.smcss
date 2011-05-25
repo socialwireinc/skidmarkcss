@@ -4,9 +4,27 @@ div {
   padding: 20px;
   @include(sample-ul.smcss);
   
+  font {{
+    size: 20px;
+    weight: bold;
+    style: italic
+  }}
+  
   ul {
     @include(sample-ul.smcss);
   }
   
   @@use box(400px, 300px, #cccccc, #999999);
+}
+
+a {
+  list {{
+    display {{
+      style: none;
+    }}
+    background {{
+      color: red;
+      image: url(yo.jpg);
+    }}
+  }}
 }

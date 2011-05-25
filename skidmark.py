@@ -68,13 +68,13 @@ class SkidmarkCSS(object):
     self.processed_tree = self._process()
     self._process_output()
     
-    if timer:
+    if timer and self.log_id == 0:
       self.verbose = True
-      self._log("Elapsed Time: %.04f" % ( time.time() - start_time, ))
+      self._log("-> Processed '%s' in %.04f seconds" % ( s_infile, time.time() - start_time, ))
       self.verbose = verbose
     
     return
-    
+  
   def get_processed_tree(self):
     """Return the object's processed tree"""
     
@@ -102,7 +102,7 @@ class SkidmarkCSS(object):
     return
     
   def _update_log_indent(self, change):
-    if type(change) is int:
+    if self.verbose and type(change) is int:
       self.log_id += change
     return self.log_id
   
@@ -274,7 +274,7 @@ class SkidmarkCSS(object):
     
     processor_result = getattr(self, fn_name)(node[1], parent)
     self._update_log_indent(+1)
-    self._log(">>> Generated %s" % ( processor_result or 'an empty result, discarding', ))
+    self._log(">>> Result > %s" % ( processor_result or 'an empty result, discarding', ))
     self._update_log_indent(-1)
     
     if type(processor_result) is list:
@@ -510,6 +510,32 @@ class SkidmarkCSS(object):
         parent.add_property(property)
         
     return ""
+  
+  def _nodeprocessor_expansion(self, data, parent):
+    root_name = data[0]
+    
+    self._update_log_indent(+1)
+    self._log("Preparing for the expansion of '%s'" % ( root_name, ))
+    
+    properties = []
+    for node_data in data[1:]:
+      node_result = self._process_node(node_data, None)
+      
+      if not type(node_result) is list:
+        node_result = [ node_result ]
+      
+      for result in node_result:
+        property = "%s-%s" % ( root_name, result )
+        properties.append(property)
+      
+    self._update_log_indent(-1)
+    
+    if isinstance(parent, n_DeclarationBlock) and properties:
+      for property in properties:
+        parent.add_property(property)
+    
+    return properties
+  
   
   #
   # Directives

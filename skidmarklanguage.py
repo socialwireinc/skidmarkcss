@@ -82,6 +82,9 @@ def combinator():
 def selector():
   return simple_selector(), ZERO_OR_ONE, (ZERO_OR_ONE, combinator, selector)
 
+def expansion():
+  return propertyname(), "{", declarationblock(), "}"
+
 def directive():
   return "@", function(), ";"
 
@@ -101,7 +104,7 @@ def property_unterminated():
   return propertyname, ":", propertyvalue
 
 def declarationblock():
-  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration, use ], ZERO_OR_ONE, property_unterminated, "}"
+  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration, use, expansion ], ZERO_OR_ONE, property_unterminated, "}"
 
 def declaration():
   return full_selector(), declarationblock
