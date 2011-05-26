@@ -19,6 +19,7 @@ class UndefinedTemplate(Exception): pass
 class InvalidTemplateUse(Exception): pass
 
 TEMPLATES = {}
+VARIABLE_STACK = []
 
 CSS_OUTPUT_COMPRESSED = 0
 CSS_OUTPUT_COMPACT = 1
@@ -393,12 +394,19 @@ class SkidmarkCSS(object):
   def _nodeprocessor_declarationblock(self, data, parent):
     """Node Processor: declarationblock"""
     
+    self._log("V Creating a new variable set in the stack")
+    VARIABLE_STACK.append({})
+    
     oDeclarationBlock = n_DeclarationBlock(parent)
     
     for node_data in data:
       node_result = self._process_node(node_data, oDeclarationBlock)
       if node_result and type(node_result) is str:
         oDeclarationBlock.add_property(node_result)
+    
+    removed_variable_set = VARIABLE_STACK.pop()
+    self._log("V Removing last variable set: %s" % ( str(removed_variable_set), ))
+    self._log("V Current Stack: %s" % ( str(VARIABLE_STACK), ))
     
     return oDeclarationBlock
     
@@ -536,7 +544,30 @@ class SkidmarkCSS(object):
     
     return properties
   
-  
+  def _nodeprocessor_variable_set(self, data, parent):
+    param_name = data[0]
+    for node_data in data[1:]:
+      param_value = self._process_node(node_data, None)
+      
+      if len(VARIABLE_STACK) == 0:
+        # We have not created anything yet, create the first slot (globals)
+        self._log("V Created the globals space and added '%s' = '%s'" % ( param_name, param_value ))
+        VARIABLE_STACK.append({param_name: param_value})
+      else:
+        # A stack already exists, add the variable to the latest stack
+        VARIABLE_STACK[-1][param_name] = param_value
+        self._log("V Added '%s' = '%s' to stack #%d" % ( param_name, param_value, len(VARIABLE_STACK) ))
+      
+      self._log("V Current Stack: %s" % ( str(VARIABLE_STACK), ))
+    
+  def _nodeprocessor_expression(self, data, parent):
+    if type(data) is str:
+      expression = data
+    else:
+      raise Unimplemented("expression '%s' in unimplemented" % ( str(data), ))
+    
+    return expression
+    
   #
   # Directives
   #

@@ -1,8 +1,11 @@
 @include(templates.smcss);
 
+$param = 5;
+
 div { 
   padding: 20px;
   @include(sample-ul.smcss);
+  $MasterParam = #456789;
   
   font {{
     size: 20px;
@@ -35,3 +38,5 @@ a {
     }}
   }}
 }
+
+$lastparam = 14;
