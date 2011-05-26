@@ -2,6 +2,8 @@
 
 import copy
 
+from propertyexpandables import PROPERTY_EXPANDABLES
+
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
   Every skidmark object need to derive from this object."""
@@ -150,25 +152,35 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     
     return len(self.properties) > 0
   
+  def _expand_property(self, property_name):
+    """Returns a list of alias property names that should also be set to the same value"""
+    
+    expandables = [ property_name ] + PROPERTY_EXPANDABLES.get(property_name, [])
+    return expandables
+  
   def add_property(self, property):
-    """Add a property to the object"""
+    """Add a property to the declaration block"""
     
     # Verify if this property already exists, if it does we need to pop it out
-    # before appending this new one (this one will essentially crush the previous
-    # entry so let's kep the output CSS as clean as possible.
+    # before appending the new one. This property will essentially crush the
+    # previous one and keep the output CSS as clean as possible.
     
-    def get_property_name(prop):
-      return prop.split(":", 1)[0].strip()
+    def get_property_parts(prop):
+      name, value = [ ps.strip() for ps in prop.split(":", 1) ]
+      return name, value
     
-    property_name = get_property_name(property)
-    property_names = [ get_property_name(prop) for prop in self.properties ]
+    prop_name, prop_value = get_property_parts(property)
+    expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
+    
+    property_names = [ get_property_parts(prop)[0] for prop in self.properties ]
     
     # If it already exists in the list, remove the original
-    if property_name in property_names:
-      property_position = property_names.index(property_name)
-      self.properties.pop(property_position)
+    for property_name in expanded_property_names:
+      if property_name in property_names:
+        property_position = property_names.index(property_name)
+        self.properties.pop(property_position)
       
-    self.properties.append(property)
+      self.properties.append(property.replace(prop_name, property_name))
 
 
 class n_TextNode(SkidmarkHierarchy):

@@ -27,4 +27,11 @@ a {
       image: url(yo.jpg);
     }}
   }}
+  
+  border {{
+    bottom {{
+      right-radius: 4px;
+      left-radius: 3px;
+    }}
+  }}
 }
