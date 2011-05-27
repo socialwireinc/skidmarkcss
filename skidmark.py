@@ -1,5 +1,6 @@
 # -*- coding: latin-1 -*-
 
+import copy
 import itertools
 import pyPEG
 import re
@@ -17,8 +18,10 @@ class ErrorInFile(Exception): pass
 class UnexpectedTreeFormat(Exception): pass
 class UndefinedTemplate(Exception): pass
 class InvalidTemplateUse(Exception): pass
+class VariableNotFound(Exception): pass
 
 TEMPLATES = {}
+VARIABLE_STACK = []
 
 CSS_OUTPUT_COMPRESSED = 0
 CSS_OUTPUT_COMPACT = 1
@@ -288,9 +291,33 @@ class SkidmarkCSS(object):
     self.log_id -= 1
     return processor_result
   
+  def get_variable_value(self, variable):
+    """Runs through the variable stack lloking for the requested variable.
+    Returns the property value."""
+    
+    stack = copy.deepcopy(VARIABLE_STACK)
+    
+    while stack:
+      variable_set = stack.pop()
+      if variable in variable_set:
+        return variable_set[variable]
+    
+    raise VariableNotFound("Variable '$%s' is undefined" % ( variable, ))
+    
+  def update_property(self, property):
+    """Verifies the property to see if the value is a reference to a variable.
+    Returns an updated property (or an unmodified property if it was not required."""
+    
+    prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
+    
+    if prop_value.startswith("$"):
+      property = property.replace(prop_value, self.get_variable_value(prop_value[1:]))
+    
+    return property
+  
   
   #
-  # Node Processors: What interprets the AST
+  # Node Processors: What runs through the AST
   #
   
   def _nodeprocessor_language(self, data, parent):
@@ -301,7 +328,7 @@ class SkidmarkCSS(object):
       node = self._process_node(node_data)
       
       if type(node) is str and not node:
-        # Will usually happen in comments were in the source
+        # Will usually happen if comments were in the source
         continue
       
       declarations.append(node)
@@ -393,12 +420,22 @@ class SkidmarkCSS(object):
   def _nodeprocessor_declarationblock(self, data, parent):
     """Node Processor: declarationblock"""
     
+    self._log("V Creating a new variable set in the stack")
+    VARIABLE_STACK.append({})
+    
     oDeclarationBlock = n_DeclarationBlock(parent)
     
     for node_data in data:
-      node_result = self._process_node(node_data, oDeclarationBlock)
-      if node_result and type(node_result) is str:
-        oDeclarationBlock.add_property(node_result)
+      property = self._process_node(node_data, oDeclarationBlock)
+      if property and type(property) is str:
+        if isinstance(parent, n_Declaration):
+          property = self.update_property(property)
+        
+        oDeclarationBlock.add_property(property)
+    
+    removed_variable_set = VARIABLE_STACK.pop()
+    self._log("V Removing last variable set: %s" % ( str(removed_variable_set), ))
+    self._log("V Current Stack: %s" % ( str(VARIABLE_STACK), ))
     
     return oDeclarationBlock
     
@@ -500,9 +537,9 @@ class SkidmarkCSS(object):
         if pr != property:
           p = pr
       if p:
-        properties.append(p)
+        properties.append(self.update_property(p))
       else:
-        properties.append(property)
+        properties.append(self.update_property(property))
     
     # Add the properties to the parent
     if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
@@ -532,11 +569,46 @@ class SkidmarkCSS(object):
     
     if isinstance(parent, n_DeclarationBlock) and properties:
       for property in properties:
+        property = self.update_property(property)
         parent.add_property(property)
     
     return properties
   
-  
+  def _nodeprocessor_variable_set(self, data, parent):
+    """Process a variable assignment"""
+    
+    param_name = data[0][1:] # ignore the leading '$'
+    
+    for node_data in data[1:]:
+      param_value = self._process_node(node_data, None)
+      for quote_char in ('"', "'"):
+        if param_value.startswith(quote_char) and param_value.endswith(quote_char):
+          param_value = param_value.strip(quote_char)
+      
+      if len(VARIABLE_STACK) == 0:
+        # We have not created anything yet, create the first slot (globals)
+        self._log("V Created the globals space and added '%s' = '%s'" % ( param_name, param_value ))
+        VARIABLE_STACK.append({param_name: param_value})
+      else:
+        # A stack already exists, add the variable to the latest stack
+        VARIABLE_STACK[-1][param_name] = param_value
+        self._log("V Added '%s' = '%s' to stack #%d" % ( param_name, param_value, len(VARIABLE_STACK) ))
+      
+      self._log("V Current Stack: %s" % ( str(VARIABLE_STACK), ))
+    
+  def _nodeprocessor_constant(self, data, parent):
+    """A constant -- not much to process here"""
+    
+    if type(data) is str:
+      if data.startswith("$"):
+        # Return the value. An exception will be raised if the variable doesn't exist!
+        return self.get_variable_value(data[1:])
+      constant = data
+    else:
+      raise Unimplemented("expression '%s' in unimplemented" % ( str(data), ))
+    
+    return constant
+    
   #
   # Directives
   #
@@ -630,6 +702,8 @@ if __name__ == '__main__':
     except UndefinedTemplate, e:
       print "%s: %s" % ( e.__class__.__name__, str(e) )
     except InvalidTemplateUse, e:
+      print "%s: %s" % ( e.__class__.__name__, str(e) )
+    except VariableNotFound, e:
       print "%s: %s" % ( e.__class__.__name__, str(e) )
     except Exception, e:
       raise

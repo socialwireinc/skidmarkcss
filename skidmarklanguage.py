@@ -23,6 +23,18 @@ t_class = "\\." + t_ident
 
 rec = re.compile
 
+def variable_set():
+  return variable(), "=", [ constant, variable, expression ], ";"
+
+def variable():
+  return rec("\$[A-Za-z0-9]*")
+
+def constant():
+  return rec("[^\n\r;*/+-]+")
+  
+def expression():
+  return 
+
 def template():
   return "@@template ", function(), declarationblock
   
@@ -104,11 +116,11 @@ def property_unterminated():
   return propertyname, ":", propertyvalue
 
 def declarationblock():
-  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration, use, expansion ], ZERO_OR_ONE, property_unterminated, "}"
+  return "{", ZERO_OR_MORE, [ property, directive, comment, declaration, use, expansion, variable_set ], ZERO_OR_ONE, property_unterminated, "}"
 
 def declaration():
   return full_selector(), declarationblock
   
 def language():
-  return ZERO_OR_MORE, [ import_rule, declaration, directive, comment, template ]
+  return ZERO_OR_MORE, [ import_rule, declaration, directive, comment, template, variable_set ]
 
