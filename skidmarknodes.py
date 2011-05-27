@@ -165,14 +165,10 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     # before appending the new one. This property will essentially crush the
     # previous one and keep the output CSS as clean as possible.
     
-    def get_property_parts(prop):
-      name, value = [ ps.strip() for ps in prop.split(":", 1) ]
-      return name, value
-    
-    prop_name, prop_value = get_property_parts(property)
+    prop_name, prop_value = self.get_property_parts(property)
     expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
     
-    property_names = [ get_property_parts(prop)[0] for prop in self.properties ]
+    property_names = [ self.get_property_parts(prop)[0] for prop in self.properties ]
     
     # If it already exists in the list, remove the original
     for property_name in expanded_property_names:
@@ -181,6 +177,14 @@ class n_DeclarationBlock(SkidmarkHierarchy):
         self.properties.pop(property_position)
       
       self.properties.append(property.replace(prop_name, property_name))
+  
+  @classmethod
+  def get_property_parts(cls, prop):
+    """Split the propername and and property value"""
+    
+    name, value = [ ps.strip() for ps in prop.split(":", 1) ]
+    return name, value
+
 
 
 class n_TextNode(SkidmarkHierarchy):

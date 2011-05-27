@@ -24,13 +24,16 @@ t_class = "\\." + t_ident
 rec = re.compile
 
 def variable_set():
-  return "$", variable_name(), "=", expression, ";"
+  return variable(), "=", [ constant, variable, expression ], ";"
 
-def variable_name():
-  return rec("[A-Za-z0-9]*")
+def variable():
+  return rec("\$[A-Za-z0-9]*")
 
+def constant():
+  return rec("[^\n\r;*/+-]+")
+  
 def expression():
-  return rec("[^;]+")  
+  return 
 
 def template():
   return "@@template ", function(), declarationblock
