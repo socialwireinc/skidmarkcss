@@ -52,6 +52,12 @@ OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
   CSS_OUTPUT_CLEAN : ": "
 }
 
+OUTPUT_TEMPLATE_COMBINATOR = {
+  CSS_OUTPUT_COMPRESSED : "%s",
+  CSS_OUTPUT_COMPACT : " %s",
+  CSS_OUTPUT_CLEAN : " %s"
+}
+
 class SkidmarkCSS(object):
   re_variable = re.compile(skidmarklanguage.t_variable)
   re_number = re.compile("^([-+]?(?:\d+(?:\.\d+)?|\d+))")
@@ -432,7 +438,8 @@ class SkidmarkCSS(object):
         else:
           selector_parts.append(selector_item)
       elif selector_type == "combinator":
-        selector_parts[-1] = "%s%s" % ( selector_parts[-1], "".join(selector_item) )
+        combinator_symbol = OUTPUT_TEMPLATE_COMBINATOR[self.output_format] % ( "".join(selector_item).strip(), )
+        selector_parts[-1] = "%s%s" % ( selector_parts[-1], combinator_symbol )
       elif  selector_type == "selector":
         selector_parts.extend(self._nodepprocessor_helper_selector(selector_item))
       elif selector_type == "attrib":
