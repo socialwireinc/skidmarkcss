@@ -146,7 +146,7 @@ class SkidmarkCSS(object):
   def _process(self):
     """Processes the AST that has been generated in __init__"""
     
-    tree, remainder = self.ast    
+    tree, remainder = self.ast
     if remainder.strip():
       error_line = 1 + self.src.rstrip().count("\n") - remainder.count("\n")
       raise ErrorInFile("Error parsing '%s'\nLine %d: %s" % ( self.s_infile, error_line, remainder.strip().split("\n")[0] ))
@@ -159,6 +159,9 @@ class SkidmarkCSS(object):
     data = self._process_node(tree[0])
     self._log("Walking through AST has completed")
     
+    # We may not get anything valuable back (an include file may simply have variable
+    # definitions... no tree there.  Clean this up if this is the case
+    data = [ item for item in data if item ]
     return data
   
   def _process_output(self):    
