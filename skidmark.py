@@ -53,7 +53,7 @@ OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
 }
 
 class SkidmarkCSS(object):
-  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, verbose_indent_level=0):
+  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, parent=None):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     
     start_time = time.time()
@@ -65,13 +65,20 @@ class SkidmarkCSS(object):
     self.output_format = output_format
     self.show_hierarchy = show_hierarchy
     self.timer = timer
-    self.log_id = verbose_indent_level
     self.src = ""
+    self.log_indent_level = 0
+    
+    if parent is not None:
+      if not isinstance(parent, SkidmarkCSS):
+        raise Unimplemented("SkidmarkCSS may only have another SkidmarkCSS as a parent")
+      self.log_indent_level = parent.log_indent_level + 1
+    
     self.ast = self._parse_file()
     self.processed_tree = self._process()
     self._process_output()
     
-    if timer and self.log_id == 0:
+    
+    if timer and self.log_indent_level == 0:
       self.verbose = True
       self._log("-> Processed '%s' in %.04f seconds" % ( s_infile, time.time() - start_time, ))
       self.verbose = verbose
@@ -86,7 +93,7 @@ class SkidmarkCSS(object):
   def _log(self, s):
     """Print strings to the screen, for debugging"""
     
-    leading = self.log_id
+    leading = self.log_indent_level
     
     s = s.strip()
     if not s:
@@ -106,8 +113,8 @@ class SkidmarkCSS(object):
     
   def _update_log_indent(self, change):
     if self.verbose and type(change) is int:
-      self.log_id += change
-    return self.log_id
+      self.log_indent_level += change
+    return self.log_indent_level
   
   def _parse_file(self):
     """Parses the data using pyPEG, according to the Skidmark Language definition"""
@@ -164,7 +171,8 @@ class SkidmarkCSS(object):
       self._log("Generated the following hierarchy")
       description = []
       for node in data:
-        description = node.describe_hierarchy(self.log_id, description)
+        if isinstance(node, SkidmarkHierarchy):
+          description = node.describe_hierarchy(self.log_indent_level, description)
       
       self._update_log_indent(+1)
       self._log("\n".join(description))
@@ -173,15 +181,15 @@ class SkidmarkCSS(object):
       self.verbose = verbose_mode
     
     css = self._generate_css(data)
+    css_str = "\n".join(css)
+    
     if self.verbose and not self.printcss:
       self._log("Generated CSS")
-      
       self._update_log_indent(+1)
-      for css_line in css:
-        self._log(css_line)
+      self._log(css_str)
       self._update_log_indent(-1)
       
-    self._create_outfile("\n".join(css))
+    self._create_outfile(css_str)
       
     self._log("=" * 72)
     self._log("Completed processing %s" % ( self.s_infile, ))
@@ -267,7 +275,7 @@ class SkidmarkCSS(object):
     if node_len != 2:
       raise UnrecognizedParsedTree("Nodes should only have 2 elements, not %d: %s" % ( node_len, str(node) ))
     
-    self.log_id += 1
+    self._update_log_indent(+1)
     fn_name = "".join([ "_nodeprocessor_", node[0] ])
     self._log("@%s" % ( fn_name, ))
     self._log("P = %s" % ( parent, ))
@@ -288,7 +296,7 @@ class SkidmarkCSS(object):
       if isinstance(parent, SkidmarkHierarchy) and isinstance(processor_result, SkidmarkHierarchy):
         parent.add_child(processor_result)
     
-    self.log_id -= 1
+    self._update_log_indent(-1)
     return processor_result
   
   def get_variable_value(self, variable):
@@ -630,7 +638,7 @@ class SkidmarkCSS(object):
                        timer=self.timer,
                        show_hierarchy=self.show_hierarchy,
                        verbose=self.verbose,
-                       verbose_indent_level=self.log_id + 1)
+                       parent=self)
       
       tree = sm.get_processed_tree()
       if tree:
@@ -682,7 +690,13 @@ if __name__ == '__main__':
     raise Exception("An input file is required, use -h for help")
   
   try:
-    sm = SkidmarkCSS(infile, s_outfile=outfile, verbose=args.verbose, timer=args.timer, printcss=args.printcss, output_format=output_format, show_hierarchy=args.hierarchy)
+    sm = SkidmarkCSS(infile,
+                     s_outfile=outfile,
+                     verbose=args.verbose,
+                     timer=args.timer,
+                     printcss=args.printcss,
+                     output_format=output_format,
+                     show_hierarchy=args.hierarchy)
   except:
     print "-=" * (72/2)
     try:
