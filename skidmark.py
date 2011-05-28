@@ -80,7 +80,6 @@ class SkidmarkCSS(object):
     self.processed_tree = self._process()
     self._process_output()
     
-    
     if timer and self.log_indent_level == 0:
       self.verbose = True
       self._log("-> Processed '%s' in %.04f seconds" % ( s_infile, time.time() - start_time, ))
@@ -200,7 +199,7 @@ class SkidmarkCSS(object):
     self._log("=" * 72)
     self._log("Completed processing %s" % ( self.s_infile, ))
     
-    return data
+    return
     
   def _generate_css(self, tree):
     """Builds the output CSS
@@ -216,27 +215,40 @@ class SkidmarkCSS(object):
         css.append(node.text)
         continue
       
-      declaration_blocks = []
-      if isinstance(node, SkidmarkHierarchy):
-        declaration_blocks = node.find_child_declaration_blocks(declaration_blocks)
-        
-      for blk in declaration_blocks:
-        declarations = []
-        declarations = blk.find_parent_declarations(declarations)
-        declarations.reverse()
-        
-        selectors = []
-        for dec in declarations:
-          selectors.append([ selector.selector for selector in dec.selectors])
-          
-        all_selectors = [ " ".join(s) for s in self._simplyfy_selectors(itertools.product(*selectors)) ]
-        
+      if type(node) is list:
+        blocks = []
+        for _node in node:
+          blocks.extend(self._generate_css_get_blk_selectors(_node))
+      else:
+        blocks = self._generate_css_get_blk_selectors(node)
+      
+      for all_selectors, blk in blocks:
         css.append(OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
           OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
           OUTPUT_TEMPLATE_PROPERTY_SEPARATORS[self.output_format].join(blk.properties)
         ))
     
     return css
+  
+  def _generate_css_get_blk_selectors(self, node):
+    declaration_blocks = []
+    if isinstance(node, SkidmarkHierarchy):
+      declaration_blocks = node.find_child_declaration_blocks(declaration_blocks)
+    
+    blocks = []
+    for blk in declaration_blocks:
+      declarations = []
+      declarations = blk.find_parent_declarations(declarations)
+      declarations.reverse()
+      
+      selectors = []
+      for dec in declarations:
+        selectors.append([ selector.selector for selector in dec.selectors])
+        
+      all_selectors = [ " ".join(s) for s in self._simplyfy_selectors(itertools.product(*selectors)) ]
+      blocks.append(( all_selectors, blk ))
+    
+    return blocks
   
   def _simplyfy_selectors(self, selectors):
     """Runs to the list of selectors and simplifies anything can can be simplified.
@@ -289,9 +301,7 @@ class SkidmarkCSS(object):
       raise Unimplemented("Node type is unimplemented: %s" % ( fn_name, ))
     
     processor_result = getattr(self, fn_name)(node[1], parent)
-    self._update_log_indent(+1)
-    self._log(">>> Result > %s" % ( processor_result or 'an empty result, discarding', ))
-    self._update_log_indent(-1)
+    self._log(">>> Processor Result (@%s) >>> %s" % ( fn_name, processor_result or 'an empty result, discarding', ))
     
     if type(processor_result) is list:
       for pr in processor_result:
@@ -495,12 +505,17 @@ class SkidmarkCSS(object):
     function_name, param_list = ( data[0], [ _[1].strip() for _ in data[1:] if _ and _[1] and _[1].strip() ] )
     fn_name = "".join([ "_directive_", function_name ])
     
-    self._log("%s" % ( fn_name ))
+    self._update_log_indent(+1)
+    self._log("@%s -> P = %s" % ( fn_name, parent ))
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Directive is unimplemented: %s" % ( fn_name, ))
       
     directive_result = getattr(self, fn_name)(parent, *param_list)
+    
+    self._log(">>> Directive Result (@%s) >>> %s" % ( fn_name, directive_result or 'nothing, discarding', ))
+    
+    self._update_log_indent(-1)
     return directive_result
   
   def _nodeprocessor_comment(self, data, parent):
