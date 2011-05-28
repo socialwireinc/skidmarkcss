@@ -1,0 +1,25 @@
+@include(variables.sm);
+@include(templates.sm);
+
+a { size: $size_base; }
+h1 {
+  font {{
+    family: arial, helvetica, sans-serif;
+    size: $size_title;
+  }}
+}
+
+
+div {
+  color: $mainColor;
+  border: 1x solid $mainColor;
+  padding: $padding;
+  
+  input[type=button] { color: green; }
+  
+  span+em {
+    font-weight:bold;
+    
+    &>sup { woah: wow; }
+  }
+}

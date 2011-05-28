@@ -165,10 +165,10 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     # before appending the new one. This property will essentially crush the
     # previous one and keep the output CSS as clean as possible.
     
-    prop_name, prop_value = self.get_property_parts(property)
+    prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
     expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
     
-    property_names = [ self.get_property_parts(prop)[0] for prop in self.properties ]
+    property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     
     # If it already exists in the list, remove the original
     for property_name in expanded_property_names:

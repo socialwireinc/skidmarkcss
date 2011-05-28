@@ -53,6 +53,9 @@ OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
 }
 
 class SkidmarkCSS(object):
+  re_variable = re.compile(skidmarklanguage.t_variable)
+  re_number = re.compile("^([-+]?(?:\d+(?:\.\d+)?|\d+))")
+
   def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, parent=None):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     
@@ -204,7 +207,7 @@ class SkidmarkCSS(object):
     Returns a list (each line of the CSS output)"""
     
     # The outer level of the tree should be a list
-    if not type(tree) is list:
+    if type(tree) is not list:
       raise UnexpectedTreeFormat("The tree format passed to the _generate_css() method is nor recognized")
     
     css = []
@@ -280,8 +283,7 @@ class SkidmarkCSS(object):
     
     self._update_log_indent(+1)
     fn_name = "".join([ "_nodeprocessor_", node[0] ])
-    self._log("@%s" % ( fn_name, ))
-    self._log("P = %s" % ( parent, ))
+    self._log("@%s -> P = %s" % ( fn_name, parent ))
     
     if not hasattr(self, fn_name) or not hasattr(getattr(self, fn_name), "__call__"):
       raise Unimplemented("Node type is unimplemented: %s" % ( fn_name, ))
@@ -306,6 +308,9 @@ class SkidmarkCSS(object):
     """Runs through the variable stack lloking for the requested variable.
     Returns the property value."""
     
+    if variable.startswith("$"):
+      variable = variable[1:]
+    
     stack = copy.deepcopy(VARIABLE_STACK)
     
     while stack:
@@ -314,15 +319,28 @@ class SkidmarkCSS(object):
         return variable_set[variable]
     
     raise VariableNotFound("Variable '$%s' is undefined" % ( variable, ))
+  
+  @classmethod
+  def get_variables_from_text(cls, text):
+    variables = set()
     
+    mo = SkidmarkCSS.re_variable.search(text)
+    while mo:
+      variables.add(text[mo.start():mo.end()])
+      text = text[mo.end():]
+      mo = SkidmarkCSS.re_variable.search(text)
+    
+    return list(variables)
+  
   def update_property(self, property):
     """Verifies the property to see if the value is a reference to a variable.
     Returns an updated property (or an unmodified property if it was not required."""
     
     prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
     
-    if prop_value.startswith("$"):
-      property = property.replace(prop_value, self.get_variable_value(prop_value[1:]))
+    all_variables = SkidmarkCSS.get_variables_from_text(prop_value)
+    for variable in all_variables:
+      property = property.replace(variable, self.get_variable_value(variable))
     
     return property
   
@@ -569,7 +587,7 @@ class SkidmarkCSS(object):
     for node_data in data[1:]:
       node_result = self._process_node(node_data, None)
       
-      if not type(node_result) is list:
+      if type(node_result) is not list:
         node_result = [ node_result ]
       
       for result in node_result:
@@ -607,19 +625,94 @@ class SkidmarkCSS(object):
       
       self._log("V Current Stack: %s" % ( str(VARIABLE_STACK), ))
     
+    return ""
+    
+  def _nodeprocessor_variable(self, data, parent):
+    """Return the value of this variable"""
+    
+    return self.get_variable_value(data)
+  
   def _nodeprocessor_constant(self, data, parent):
     """A constant -- not much to process here"""
     
     if type(data) is str:
       if data.startswith("$"):
         # Return the value. An exception will be raised if the variable doesn't exist!
-        return self.get_variable_value(data[1:])
+        return self.get_variable_value(data)
       constant = data
     else:
       raise Unimplemented("expression '%s' in unimplemented" % ( str(data), ))
     
     return constant
+  
+  def _nodeprocessor_math_expression(self, data, parent):
+    """A math expression parser -- does its best!"""
     
+    operation = []
+    for item in data:
+      if type(item) is str:
+        operation.append(item)
+      else:
+        operation.append(self._process_node(item, None))
+    
+    self._log("Math expression is -> '%s'" % ( " ".join([ s.strip() for s in operation ]), ))
+    
+    return self._nodeprocessor_math_expression_helper(operation)
+  
+  def _nodeprocessor_math_expression_helper(self, operation):
+    """Helper function: does the math.
+    operation = ( left_constant, math_operation, right_constant )
+    example: ( '10', '+', '15' )"""
+
+    ops = {
+      '+': lambda a, b: a + b,
+      '-': lambda a, b: a - b,
+      '*': lambda a, b: a * b,
+      '/': lambda a, b: a / b
+    }
+    
+    all_operations = list(operation)
+    
+    L = all_operations.pop(0)
+    while all_operations:
+      op = all_operations.pop(0)
+      R = all_operations.pop(0)
+      
+      Li, Lmeasure = SkidmarkCSS.get_number_parts(L)
+      Ri, Rmeasure = SkidmarkCSS.get_number_parts(R)
+      
+      if not (Lmeasure == Rmeasure or not Lmeasure or not Rmeasure):
+        raise Unimplemented("It is not possible to compute '%s %s %s'" % ( L.strip(), op.strip(), R.strip() ))
+      
+      if not op in ops:
+        raise Unimplemented("Math expression %s is not implemented" % ( op, ))
+        
+      L = str(ops[op](Li, Ri)) + (Lmeasure or Rmeasure)
+      if len(all_operations) == 0:
+        return L
+    
+    print "Is it possible to get here???????????????????"
+    return str(ops[op](Li, Ri)) + (Lmeasure or Rmeasure)
+  
+  @classmethod
+  def get_number_parts(cls, number):
+    """Retrieve the number and measurement.
+    Example: "12px" -> ( "12", "px" )"""
+    
+    num_cast = { True: float, False: int }
+    
+    mo = SkidmarkCSS.re_number.match(number)
+    if mo and mo.group():
+      value = num_cast["." in mo.group()](mo.group())
+    else:
+      value = 0
+    
+    s = number.split(str(value))
+    if len(s) == 2:
+      return value, s[1].strip()
+    return value, ""
+  
+  
   #
   # Directives
   #

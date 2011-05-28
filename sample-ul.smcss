@@ -1,8 +1,0 @@
-b {
-    $SampleParam = Francis;
-    font-weight: bold;
-}
-
-strong {
-    font-weight: normal;
-}

@@ -1,0 +1,4 @@
+$size_base = 0.8em;
+$size_title = $size_base * 1.3;
+$padding = $size_base + 1.3em / 0.4;
+$mainColor = #f0f0f0;
