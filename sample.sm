@@ -7,19 +7,17 @@ h1 {
     family: arial, helvetica, sans-serif;
     size: $size_title;
   }}
+  
+  padding {{
+    left: 3px;
+    top: 1px;
+    bottom: 2px;
+    right: 6px;
+  }}
 }
-
 
 div {
   color: $mainColor;
   border: 1x solid $mainColor;
   padding: $padding;
-  
-  input[type=button] { color: green; }
-  
-  span+em {
-    font-weight:bold;
-    
-    &>sup { woah: wow; }
-  }
 }

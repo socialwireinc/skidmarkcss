@@ -25,3 +25,18 @@ PROPERTY_EXPANDABLES = {
     "-webkit-border-bottom-right-radius"
   ]
 }
+
+PROPERTY_SHORTHANDS = {
+  "padding": [
+    [ "padding-top", "padding-right", "padding-bottom", "padding-left" ],
+  ],
+  "margin": [
+    [ "margin-top", "margin-right", "margin-bottom", "margin-left" ],
+  ]
+}
+
+PROPERTIES_AVAILABLE_FOR_SHORTHAND = []
+for block_lists in PROPERTY_SHORTHANDS.values():
+  for block in block_lists:
+    PROPERTIES_AVAILABLE_FOR_SHORTHAND.extend(block)
+PROPERTIES_AVAILABLE_FOR_SHORTHAND = list(set(PROPERTIES_AVAILABLE_FOR_SHORTHAND))
