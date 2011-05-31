@@ -2,7 +2,7 @@
 
 import copy
 
-from propertyexpandables import PROPERTY_EXPANDABLES
+from propertyexpandables import PROPERTY_EXPANDABLES, PROPERTY_SHORTHANDS, PROPERTIES_AVAILABLE_FOR_SHORTHAND
 
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
@@ -167,16 +167,72 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     
     prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
     expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
-    
     property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     
     # If it already exists in the list, remove the original
+    requires_shorthand_check = False
     for property_name in expanded_property_names:
+      if not requires_shorthand_check and property_name in PROPERTIES_AVAILABLE_FOR_SHORTHAND:
+        requires_shorthand_check = True
+      
       if property_name in property_names:
         property_position = property_names.index(property_name)
         self.properties.pop(property_position)
       
       self.properties.append(property.replace(prop_name, property_name))
+    
+    if requires_shorthand_check:
+      self.simplify_shorthandables()
+    
+    return
+  
+  def remove_property(self, property_name):
+    active_properties = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
+    to_remove = []
+    
+    if type(property_name) is list:
+      for p_name in property_name:
+        if p_name in active_properties:
+          to_remove.append(active_properties.index(p_name))      
+    else:
+      if property_name in active_properties:
+        to_remove.append(active_properties.index(property_name))
+    
+    if to_remove:
+      to_remove.sort()
+      while to_remove:
+        idx = to_remove.pop()
+        self.properties.pop(idx)
+    
+    return self.properties
+  
+  def has_property(self, property_name):
+    """Check whether or not a property exists.  If so, the property's
+    value is returned, None is returned oterwise"""
+    
+    for prop in self.properties:
+      p_name, p_value = n_DeclarationBlock.get_property_parts(prop)
+      if p_name == property_name:
+        return p_value
+    
+    return None
+  
+  def simplify_shorthandables(self):
+    """Scan through the properties to determine if it is possible to regroup
+    the entries into shorthand syntax.  This method will take care of updating
+    the properties itself and does not return anything.
+    
+    I decided that 'shorthandables' was a word.  Use it at will."""
+    
+    for shorthand, shorthand_blocks in PROPERTY_SHORTHANDS.iteritems():
+      for blk in shorthand_blocks:
+        block_values = [ self.has_property(property_name) for property_name in blk ]
+        if None not in block_values:
+          shorthand_property = shorthand + ": " + " ".join(block_values)
+          self.add_property(shorthand_property)
+          self.remove_property(blk)
+    
+    return
   
   @classmethod
   def get_property_parts(cls, prop):
@@ -184,7 +240,6 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     
     name, value = [ ps.strip() for ps in prop.split(":", 1) ]
     return name, value
-
 
 
 class n_TextNode(SkidmarkHierarchy):
