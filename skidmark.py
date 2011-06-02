@@ -76,6 +76,7 @@ class SkidmarkCSS(object):
     self.timer = timer
     self.src = ""
     self.log_indent_level = 0
+    self.math_ops = None
     
     if parent is not None:
       if not isinstance(parent, SkidmarkCSS):
@@ -324,6 +325,8 @@ class SkidmarkCSS(object):
     """Runs through the variable stack lloking for the requested variable.
     Returns the property value."""
     
+    variable = variable.strip()
+    
     if variable.startswith("$"):
       variable = variable[1:]
     
@@ -359,6 +362,12 @@ class SkidmarkCSS(object):
       property = property.replace(variable, self.get_variable_value(variable))
     
     return property
+  
+  def get_math_ops(self):
+    if self.math_ops is None:
+      self.math_ops = MathOperations(self)
+    
+    return self.math_ops
   
   
   #
@@ -667,54 +676,24 @@ class SkidmarkCSS(object):
     
     return constant
   
-  def _nodeprocessor_math_expression(self, data, parent):
+  def _nodeprocessor_math_operation(self, data, parent):
     """A math expression parser -- does its best!"""
-    
-    operation = []
+
+    sequence = self._nodeprocessor_math_operation_helper(data)
+    return self.get_math_ops().reduce_group(sequence)
+  
+  def _nodeprocessor_math_group(self, data, parent):
+    return self._nodeprocessor_math_operation_helper(data)
+  
+  def _nodeprocessor_math_operation_helper(self, data):
+    seq = []
     for item in data:
       if type(item) is str:
-        operation.append(item)
+        seq.append(item)
       else:
-        operation.append(self._process_node(item, None))
-    
-    self._log("Math expression is -> '%s'" % ( " ".join([ s.strip() for s in operation ]), ))
-    
-    return self._nodeprocessor_math_expression_helper(operation)
-  
-  def _nodeprocessor_math_expression_helper(self, operation):
-    """Helper function: does the math.
-    operation = ( left_constant, math_operation, right_constant )
-    example: ( '10', '+', '15' )"""
-
-    ops = {
-      '+': lambda a, b: a + b,
-      '-': lambda a, b: a - b,
-      '*': lambda a, b: a * b,
-      '/': lambda a, b: a / b
-    }
-    
-    all_operations = list(operation)
-    
-    L = all_operations.pop(0)
-    while all_operations:
-      op = all_operations.pop(0)
-      R = all_operations.pop(0)
-      
-      Li, Lmeasure = SkidmarkCSS.get_number_parts(L)
-      Ri, Rmeasure = SkidmarkCSS.get_number_parts(R)
-      
-      if not (Lmeasure == Rmeasure or not Lmeasure or not Rmeasure):
-        raise Unimplemented("It is not possible to compute '%s %s %s'" % ( L.strip(), op.strip(), R.strip() ))
-      
-      if not op in ops:
-        raise Unimplemented("Math expression %s is not implemented" % ( op, ))
+        seq.append(self._process_node(item))
         
-      L = str(ops[op](Li, Ri)) + (Lmeasure or Rmeasure)
-      if len(all_operations) == 0:
-        return L
-    
-    print "Is it possible to get here???????????????????"
-    return str(ops[op](Li, Ri)) + (Lmeasure or Rmeasure)
+    return seq
   
   @classmethod
   def get_number_parts(cls, number):
@@ -766,7 +745,84 @@ class SkidmarkCSS(object):
             parent.add_child(branch)
         return tree
     return []
+
+
+class MathOperations(object):
+  # Define ops, division defined in __init__
+  ops = {
+    "+": lambda a, b: a + b,
+    "-": lambda a, b: a - b,
+    "*": lambda a, b: a * b,
+  }
+
+  def __init__(self, parent):
+    smObject = parent
+    
+    def division(a, b):
+      r = (a * 1.0) / b
+      if divmod(r, int(r))[1] == 0:
+        return int(r)
+      return r
+    
+    MathOperations.ops["/"] = division
   
+  @classmethod
+  def reduce_group(cls, data):
+    seq = []
+    for item in data:
+      if type(item) is list:
+        seq.append(cls.reduce_group(item))
+      else:
+        seq.append(item)
+    return cls.compute(seq)
+  
+  @classmethod
+  def compute(cls, seq):
+    loop_start = 1
+    if "*" in seq or "/" in seq:
+      loop_start = 2
+  
+    # Initialize the new sequence (for once we've processed * and /)
+    n_seq = []
+    
+    for loop in map(lambda x: x - 1, range(loop_start, 0, -1)):
+      # loop=1 = process *, /
+      # loop=0 = process +, -
+      
+      L = seq.pop(0)
+      while seq:
+        op = seq.pop(0)
+        R = seq.pop(0)
+        
+        Li, Lmeasure = SkidmarkCSS.get_number_parts(L)
+        Ri, Rmeasure = SkidmarkCSS.get_number_parts(R)
+
+        if not (Lmeasure == Rmeasure or not Lmeasure or not Rmeasure):
+          raise Unimplemented("It is not possible to compute '%s %s %s'" % ( Lmeasure.strip(), op.strip(), Rmeasure.strip() ))
+        
+        if not op in cls.ops:
+          raise Unimplemented("Math expression %s is not implemented" % ( op, ))
+        
+        if loop == 1:
+          if op in ("*", "/"):
+            L = str(cls.ops.get(op)(Li, Ri)) + (Lmeasure or Rmeasure)
+            if not seq:
+              n_seq.append(L)
+          else:
+            n_seq.extend([L, op])
+            if not seq:
+              n_seq.append(R)
+            else:
+              L = R
+        else:
+          L = str(cls.ops.get(op)(Li, Ri)) + (Lmeasure or Rmeasure)
+        
+      if loop == 1:
+        seq = n_seq
+    
+    return L
+
+
 # ----------------------------------------------------------------------------
 
 def get_arguments():

@@ -23,7 +23,7 @@ t_hash = "#" + t_name
 t_ident = "[-]?" + p(t_nmstart) + p(t_nmchar) + "*"
 t_class = "\\." + t_ident
 t_variable = "\$[_A-Za-z0-9]+"
-t_constant = "[^\n\r;*/+-]+"
+t_constant = "[^ \n\r();*/+-]+"
 t_import_rule = "\@import\s+url\s*[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
 t_comment = r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/"
@@ -47,16 +47,25 @@ re_string = rec(t_string)
 re_variable = rec(t_variable)
 
 def variable_set():
-  return variable(), "=", [ math_expression, constant, variable ], ";"
+  return variable(), "=", [ math_operation, constant, variable ], ";"
 
 def variable():
   return re_variable
 
 def constant():
   return re_constant
-  
-def math_expression():
-  return [ variable, constant ], ONE_OR_MORE, (re_math, [ variable, constant ])
+
+def math_operation():
+  return [ math_var(), math_group ], math_op(), [ math_var(), math_group ], ZERO_OR_MORE, (math_op(), [ math_var(), math_group ])
+
+def math_var():
+  return [ constant, variable ]
+
+def math_group():
+  return "(", math_operation(), ")"
+
+def math_op():
+  return re_math
 
 def template():
   return "@@template ", function(), declarationblock
