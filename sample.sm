@@ -1,23 +1,18 @@
 @include(variables.sm);
 @include(templates.sm);
 
-a { size: $size_base; }
-h1 {
-  font {{
-    family: arial, helvetica, sans-serif;
-    size: $size_title;
-  }}
-  
-  padding {{
-    left: 3px;
-    top: 1px;
-    bottom: 2px;
-    right: 6px;
-  }}
+#page {
+  margin: 0 auto;
+  width: $page_width;
 }
 
 div {
-  color: $mainColor;
-  border: 1x solid $mainColor;
-  padding: $padding;
+  $width = 1024px;
+  $height = $width * 3 / 4;
+  &.surprise {
+    $width = $width / 2;
+    @@use box($width, $height, pink, red);
+  }
+  
+  @@use box($width, $height, blue, black);
 }
