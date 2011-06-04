@@ -169,7 +169,7 @@ class SkidmarkCSS(object):
     self._log("Walking through AST has completed")
     
     # We may not get anything valuable back (an include file may simply have variable
-    # definitions... no tree there.  Clean this up if this is the case
+    # definitions... no tree in that case).  Clean this up if this is the case.
     data = [ item for item in data if item ]
     return data
   
@@ -364,6 +364,9 @@ class SkidmarkCSS(object):
     return property
   
   def get_math_ops(self):
+    """Returns the MathOperations class for this object. If it has not yet
+    been defined it will be created before it is returned"""
+    
     if self.math_ops is None:
       self.math_ops = MathOperations(self)
     
@@ -381,11 +384,11 @@ class SkidmarkCSS(object):
     for node_data in data:
       node = self._process_node(node_data)
       
-      if type(node) is str and not node:
-        # Will usually happen if comments were in the source
-        continue
-      
-      declarations.append(node)
+      # If the node is an empty string, it is because we processed a comment in the source.
+      # Ignore it.  Only process those that don't fit this criteria.
+      if not (type(node) is str and not node):
+        declarations.append(node)
+    
     return declarations
   
   def _nodeprocessor_declaration(self, data, parent):
@@ -488,9 +491,8 @@ class SkidmarkCSS(object):
         
         oDeclarationBlock.add_property(property)
     
-    removed_variable_set = VARIABLE_STACK.pop()
-    self._log("V Removing last variable set: %s" % ( str(removed_variable_set), ))
-    self._log("V Current Stack: %s" % ( str(VARIABLE_STACK), ))
+    VARIABLE_STACK.pop()
+    self._log("V Removing last variable set, remaining stack: %s" % ( str(VARIABLE_STACK), ))
     
     return oDeclarationBlock
     
@@ -548,12 +550,14 @@ class SkidmarkCSS(object):
     """Define a template that may be reused several times throughout this CSS"""
     
     template_name = data[0]
-    params = [ parameter[1] or "" for parameter in data[1:-1] ]
+    parameters = data[1:-1]
+    declaration_node = data[-1]
     
+    params = [ parameter[1] or "" for parameter in parameters ]    
     if len(params) == 1 and not params[0]:
-      params.pop(0)
+      params = []
     
-    dec_block = self._process_node(data[-1], parent=None)
+    dec_block = self._process_node(declaration_node, parent=None)
     
     TEMPLATES[template_name] = n_Template(None, template_name, params, dec_block)
     return ""
@@ -563,10 +567,11 @@ class SkidmarkCSS(object):
     The template must exist before @@use may be called"""
     
     template_name = data[0]
-    params = [ parameter[1] or "" for parameter in data[1:] ]
-
+    parameters = data[1:]
+    
+    params = [ parameter[1] or "" for parameter in parameters ]
     if len(params) == 1 and not params[0]:
-      params.pop(0)
+      params = []
     
     template = TEMPLATES.get(template_name)
     
@@ -591,15 +596,9 @@ class SkidmarkCSS(object):
 
     properties = []
     for property in dec_block.properties:
-      p = ""
       for search, replace in param_substitutions:
-        pr = property.replace(search, replace)
-        if pr != property:
-          p = pr
-      if p:
-        properties.append(self.update_property(p))
-      else:
-        properties.append(self.update_property(property))
+        property = property.replace(search, replace)
+      properties.append(self.update_property(property))
     
     # Add the properties to the parent
     if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
@@ -610,12 +609,13 @@ class SkidmarkCSS(object):
   
   def _nodeprocessor_expansion(self, data, parent):
     root_name = data[0]
+    elements = data[1:]
     
     self._update_log_indent(+1)
     self._log("Preparing for the expansion of '%s'" % ( root_name, ))
     
     properties = []
-    for node_data in data[1:]:
+    for node_data in elements:
       node_result = self._process_node(node_data, None)
       
       if type(node_result) is not list:
@@ -638,8 +638,9 @@ class SkidmarkCSS(object):
     """Process a variable assignment"""
     
     param_name = data[0][1:] # ignore the leading '$'
+    elements = data[1:]
     
-    for node_data in data[1:]:
+    for node_data in elements:
       param_value = self._process_node(node_data, None)
       for quote_char in ('"', "'"):
         if param_value.startswith(quote_char) and param_value.endswith(quote_char):
@@ -683,9 +684,13 @@ class SkidmarkCSS(object):
     return self.get_math_ops().reduce_group(sequence)
   
   def _nodeprocessor_math_group(self, data, parent):
+    """Processes a math group (math expressions found within parentheses)"""
+    
     return self._nodeprocessor_math_operation_helper(data)
   
   def _nodeprocessor_math_operation_helper(self, data):
+    """Helper Function: Returns a normalized sequence of operations (Python list)"""
+    
     seq = []
     for item in data:
       if type(item) is str:
@@ -748,6 +753,8 @@ class SkidmarkCSS(object):
 
 
 class MathOperations(object):
+  """Defines the math operators"""
+  
   # Define ops, division defined in __init__
   ops = {
     "+": lambda a, b: a + b,
@@ -756,8 +763,14 @@ class MathOperations(object):
   }
 
   def __init__(self, parent):
+    """Initialize the object, setting the SkidmarkCSS object as a parent"""
+    
+    if not isinstance(parent, SkidmarkCSS):
+      raise Unimplemented("The parent passed to the MathOperations object must be a SkidmarkCSS object")
+    
     smObject = parent
     
+    # Define the division operator (ignore floating point if it has no significance)
     def division(a, b):
       r = (a * 1.0) / b
       if divmod(r, int(r))[1] == 0:
@@ -768,6 +781,10 @@ class MathOperations(object):
   
   @classmethod
   def reduce_group(cls, data):
+    """Reduces the groups by computing the elements it is able to handle at the
+    current moment. Recurses in order to process all it can.
+    Returns the computed value from the data provided."""
+    
     seq = []
     for item in data:
       if type(item) is list:
@@ -778,6 +795,10 @@ class MathOperations(object):
   
   @classmethod
   def compute(cls, seq):
+    """Processes the sequence, applying the math operations.
+    Returns a final computed data (string), including the measurement from
+    the data (if applicable)"""
+    
     loop_start = 1
     if "*" in seq or "/" in seq:
       loop_start = 2

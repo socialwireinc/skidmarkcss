@@ -187,6 +187,10 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     return
   
   def remove_property(self, property_name):
+    """Remove a property, by name.  The method does not indicate whether or not
+    a property was actually removed (in the case where it never existed to be removed).
+    Returns the properties, post removal."""
+    
     active_properties = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     to_remove = []
     
@@ -223,6 +227,10 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     the properties itself and does not return anything.
     
     I decided that 'shorthandables' was a word.  Use it at will."""
+    
+    # TODO: the output may already have a shorthand version (padding, for example)
+    # when we are adding a new property (padding-top). We need to identify this
+    # and update the shorthand version correctly
     
     for shorthand, shorthand_blocks in PROPERTY_SHORTHANDS.iteritems():
       for blk in shorthand_blocks:
