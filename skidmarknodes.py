@@ -2,7 +2,10 @@
 
 import copy
 
-from propertyexpandables import PROPERTY_EXPANDABLES, PROPERTY_SHORTHANDS, PROPERTIES_AVAILABLE_FOR_SHORTHAND
+from propertyexpandables import PROPERTY_EXPANDABLES
+from propertyexpandables import PROPERTY_SHORTHANDS
+from propertyexpandables import PROPERTIES_AVAILABLE_FOR_SHORTHAND
+from propertyexpandables import ShorthandHandler
 
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
@@ -146,6 +149,7 @@ class n_DeclarationBlock(SkidmarkHierarchy):
   def __init__(self, parent):
     SkidmarkHierarchy.__init__(self, parent)
     self.properties = []
+    self.requires_shorthand_check = False
   
   def __nonzero__(self):
     """The object is considered "valid" if it has properties"""
@@ -170,19 +174,15 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     
     # If it already exists in the list, remove the original
-    requires_shorthand_check = False
     for property_name in expanded_property_names:
-      if not requires_shorthand_check and property_name in PROPERTIES_AVAILABLE_FOR_SHORTHAND:
-        requires_shorthand_check = True
+      if not self.requires_shorthand_check and property_name in PROPERTIES_AVAILABLE_FOR_SHORTHAND:
+        self.requires_shorthand_check = True
       
       if property_name in property_names:
         property_position = property_names.index(property_name)
         self.properties.pop(property_position)
       
       self.properties.append(property.replace(prop_name, property_name))
-    
-    if requires_shorthand_check:
-      self.simplify_shorthandables()
     
     return
   
@@ -234,9 +234,10 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     
     for shorthand, shorthand_blocks in PROPERTY_SHORTHANDS.iteritems():
       for blk in shorthand_blocks:
-        block_values = [ self.has_property(property_name) for property_name in blk ]
-        if None not in block_values:
-          shorthand_property = shorthand + ": " + " ".join(block_values)
+        style = blk[0]
+        block_values = [ self.has_property(property_name) for property_name in blk[1:] ]
+        shorthand_property = ShorthandHandler.process(style, shorthand, block_values)
+        if shorthand_property:
           self.add_property(shorthand_property)
           self.remove_property(blk)
     

@@ -230,6 +230,7 @@ class SkidmarkCSS(object):
         blocks = self._generate_css_get_blk_selectors(node)
       
       for all_selectors, blk in blocks:
+        blk.simplify_shorthandables()
         css.append(OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
           OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
           OUTPUT_TEMPLATE_PROPERTY_SEPARATORS[self.output_format].join(blk.properties)

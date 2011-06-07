@@ -16,3 +16,35 @@ div {
   
   @@use box($width, $height, blue, black);
 }
+
+div {
+  padding-top: 2px;
+  padding-right: 3px;
+  padding-bottom: 4px;
+  padding-left: 3px;
+  
+  font-weight: bold;
+  font-style: italic;
+  font-variant: small-caps;
+  font-size: 1em;
+  line-height: 1.5em;
+  font-family: verdana,sans-serif;
+  
+  background-color: #fff;
+  background-image: url(image.gif);
+  background-repeat: no-repeat;
+  background-position: top left; 
+  
+  list-style: #fff;
+  list-style-type: disc;
+  list-style-position: outside;
+  list-style-image: url(image.gif);
+  
+  border-width: 1px;
+  border-color: black;
+  border-style: solid;
+  
+  border-right-width: 1px;
+  border-right-color: black;
+  border-right-style: solid;
+}
