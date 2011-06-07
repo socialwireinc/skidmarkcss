@@ -59,13 +59,13 @@ class ShorthandHandler(object):
   def process_font(cls, shorthand, block_values):
     """Custom handler for the 'font' shorthand"""
     
+    shorthand_property = None
     if len(block_values) == 5:
       shorthand_property = "%s: %s/%s %s %s %s" % tuple([shorthand] + block_values)
-      return shorthand_property
     elif len(block_values) == 6:
       shorthand_property = "%s: %s %s %s %s/%s %s" % tuple([shorthand] + block_values)
     
-    return None
+    return shorthand_property
 
 PROPERTY_EXPANDABLES = {
   #
