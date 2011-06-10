@@ -13,6 +13,35 @@ class ShorthandHandler(object):
     pass
   
   @classmethod
+  def is_shorthand(cls, prop_name):
+    return PROPERTY_SHORTHANDS.has_key(prop_name)
+  
+  @classmethod
+  def expand_shorthand(cls, prop_name, prop_value):
+    properties = None
+    
+    blocks = PROPERTY_SHORTHANDS.get(prop_name)
+    if blocks:
+      for block in blocks:
+        style = block[0]
+        block_values = block[1:]
+        
+        if style == PROPERTY_SHORTHAND_TYPE_STANDARD4:
+          properties = cls.expand_standard4(block_values, prop_value)
+        elif style == PROPERTY_SHORTHAND_TYPE_PASSTHRU:
+          properties = cls.expand_passthru(block_values, prop_value)
+        elif style == PROPERTY_SHORTHAND_TYPE_CUSTOM:
+          fn_name = "expand_%s" % ( prop_name.replace("-", "_"), )
+          if hasattr(cls, fn_name):
+            properties = getattr(cls, fn_name)(block_values, prop_value)
+    
+    return properties
+  
+  #
+  # Processors: From long to short
+  #
+  
+  @classmethod
   def process(cls, style, shorthand, block_values):
     """Process a style, given the shorhand and block values. The block values
     are the fields, present in the declaration block's properties that match
@@ -66,6 +95,23 @@ class ShorthandHandler(object):
       shorthand_property = "%s: %s %s %s %s/%s %s" % tuple([shorthand] + block_values)
     
     return shorthand_property
+  
+  #
+  # expanders: from short to long
+  #
+  
+  @classmethod
+  def expand_passthru(cls, block_values, prop_value):
+    values = prop_value.split(" ", len(block_values))
+    if len(block_values) == len(values):
+      return zip(block_values, values)
+    return None
+  
+  @classmethod
+  def expand_standard4(cls, block_values, prop_value):
+    #print prop_value, block_values
+    return None
+
 
 PROPERTY_EXPANDABLES = {
   #
@@ -121,7 +167,7 @@ PROPERTY_SHORTHANDS = {
   
   "border": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "border-width", "border-color", "border-style" ]
+      "border-width", "border-style", "border-color" ]
   ],
   
   "border-top": [

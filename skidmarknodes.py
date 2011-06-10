@@ -14,7 +14,6 @@ class SkidmarkHierarchy(object):
   def __init__(self, parent=None):
     self.parent = parent
     self.children = []
-    self._consumed = False
     
   def __repr__(self):
     return "%s__%d" % ( self.__class__.__name__, id(self) )
@@ -24,6 +23,7 @@ class SkidmarkHierarchy(object):
     
     cloned_object = copy.deepcopy(self)
     cloned_object._set_parent_child_relationship(parent)
+    
     return cloned_object
   
   def _set_parent_child_relationship(self, parent):
@@ -146,9 +146,10 @@ class n_Selector(SkidmarkHierarchy):
 class n_DeclarationBlock(SkidmarkHierarchy):
   """Defines a CSS declaration block"""
   
-  def __init__(self, parent):
+  def __init__(self, parent, simplify_output):
     SkidmarkHierarchy.__init__(self, parent)
     self.properties = []
+    self.simplify_output = simplify_output
     self.requires_shorthand_check = False
   
   def __nonzero__(self):
@@ -162,7 +163,7 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     expandables = [ property_name ] + PROPERTY_EXPANDABLES.get(property_name, [])
     return expandables
   
-  def add_property(self, property):
+  def add_property(self, property, bypass_expand=False):
     """Add a property to the declaration block"""
     
     # Verify if this property already exists, if it does we need to pop it out
@@ -172,6 +173,15 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
     expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
     property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
+    
+    if self.simplify_output and not bypass_expand and ShorthandHandler.is_shorthand(prop_name):
+      properties_to_add = ShorthandHandler.expand_shorthand(prop_name, prop_value)
+      if properties_to_add:
+        for p_name, p_value in properties_to_add:
+          new_property = "%s: %s" % ( p_name, p_value )
+          self.add_property(new_property)
+        
+        return
     
     # If it already exists in the list, remove the original
     for property_name in expanded_property_names:
@@ -228,17 +238,13 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     
     I decided that 'shorthandables' was a word.  Use it at will."""
     
-    # TODO: the output may already have a shorthand version (padding, for example)
-    # when we are adding a new property (padding-top). We need to identify this
-    # and update the shorthand version correctly
-    
     for shorthand, shorthand_blocks in PROPERTY_SHORTHANDS.iteritems():
       for blk in shorthand_blocks:
         style = blk[0]
         block_values = [ self.has_property(property_name) for property_name in blk[1:] ]
         shorthand_property = ShorthandHandler.process(style, shorthand, block_values)
         if shorthand_property:
-          self.add_property(shorthand_property)
+          self.add_property(shorthand_property, bypass_expand=True)
           self.remove_property(blk)
     
     return

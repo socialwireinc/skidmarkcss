@@ -15,6 +15,7 @@ div {
   }
   
   @@use box($width, $height, blue, black);
+  border-width: 12px;
 }
 
 div {
@@ -47,4 +48,6 @@ div {
   border-right-width: 1px;
   border-right-color: black;
   border-right-style: solid;
+  
+  border-radius: 3px;
 }

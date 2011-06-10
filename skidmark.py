@@ -62,7 +62,7 @@ class SkidmarkCSS(object):
   re_variable = re.compile(skidmarklanguage.t_variable)
   re_number = re.compile("^([-+]?(?:\d+(?:\.\d+)?|\d+))")
 
-  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, parent=None):
+  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, simplify_output=True, parent=None):
     """Create the object by specifying a filename (s_infile) as an argument (string)"""
     
     start_time = time.time()
@@ -73,6 +73,7 @@ class SkidmarkCSS(object):
     self.printcss = printcss
     self.output_format = output_format
     self.show_hierarchy = show_hierarchy
+    self.simplify_output = simplify_output
     self.timer = timer
     self.src = ""
     self.log_indent_level = 0
@@ -230,7 +231,9 @@ class SkidmarkCSS(object):
         blocks = self._generate_css_get_blk_selectors(node)
       
       for all_selectors, blk in blocks:
-        blk.simplify_shorthandables()
+        if self.simplify_output:
+          blk.simplify_shorthandables()
+        
         css.append(OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
           OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
           OUTPUT_TEMPLATE_PROPERTY_SEPARATORS[self.output_format].join(blk.properties)
@@ -482,7 +485,7 @@ class SkidmarkCSS(object):
     self._log("V Creating a new variable set in the stack")
     VARIABLE_STACK.append({})
     
-    oDeclarationBlock = n_DeclarationBlock(parent)
+    oDeclarationBlock = n_DeclarationBlock(parent, self.simplify_output)
     
     for node_data in data:
       property = self._process_node(node_data, oDeclarationBlock)
@@ -741,6 +744,7 @@ class SkidmarkCSS(object):
                        timer=self.timer,
                        show_hierarchy=self.show_hierarchy,
                        verbose=self.verbose,
+                       simplify_output=self.simplify_output,
                        parent=self)
       
       tree = sm.get_processed_tree()
@@ -865,6 +869,7 @@ def get_arguments():
   arg_parser.add_argument("--clean", dest="format", help="Outputs the CSS in 'clean' format", action="store_const", const=CSS_OUTPUT_CLEAN)
   arg_parser.add_argument("--compact", dest="format", help="Outputs the CSS in 'compact' format (default)", action="store_const", const=CSS_OUTPUT_COMPACT)
   arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=CSS_OUTPUT_COMPRESSED)
+  arg_parser.add_argument("-ns", "--nosimplify", dest="simplify_output", help="Do not simplify the output by using shorthand notions where possible", action="store_false")
   
   return arg_parser.parse_args()
 
@@ -892,7 +897,8 @@ if __name__ == '__main__':
                      timer=args.timer,
                      printcss=args.printcss,
                      output_format=output_format,
-                     show_hierarchy=args.hierarchy)
+                     show_hierarchy=args.hierarchy,
+                     simplify_output=args.simplify_output)
   except:
     print "-=" * (72/2)
     try:
