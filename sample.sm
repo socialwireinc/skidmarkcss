@@ -20,9 +20,9 @@ div {
 
 div {
   padding-top: 2px;
-  padding-right: 3px;
-  padding-bottom: 4px;
-  padding-left: 3px;
+  padding-right: 2px;
+  padding-bottom: 2px;
+  padding-left: 2px;
   
   font-weight: bold;
   font-style: italic;
@@ -36,7 +36,6 @@ div {
   background-repeat: no-repeat;
   background-position: top left; 
   
-  list-style: #fff;
   list-style-type: disc;
   list-style-position: outside;
   list-style-image: url(image.gif);
@@ -49,5 +48,5 @@ div {
   border-right-color: black;
   border-right-style: solid;
   
-  border-radius: 3px;
+  background: red;
 }

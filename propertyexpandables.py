@@ -37,6 +37,21 @@ class ShorthandHandler(object):
     
     return properties
   
+  @classmethod
+  def get_all_expand_properties(cls, prop_name):
+    properties = set()
+    
+    blocks = PROPERTY_SHORTHANDS.get(prop_name)
+    if blocks:
+      for block in blocks:
+        style = block[0]
+        block_values = block[1:]
+        for value in block_values:
+          properties.add(value)
+    
+    return list(properties)
+  
+  
   #
   # Processors: From long to short
   #

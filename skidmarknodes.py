@@ -171,17 +171,19 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     # previous one and keep the output CSS as clean as possible.
     
     prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
-    expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
-    property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     
     if self.simplify_output and not bypass_expand and ShorthandHandler.is_shorthand(prop_name):
       properties_to_add = ShorthandHandler.expand_shorthand(prop_name, prop_value)
+      
       if properties_to_add:
         for p_name, p_value in properties_to_add:
           new_property = "%s: %s" % ( p_name, p_value )
           self.add_property(new_property)
         
         return
+    
+    expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
+    property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     
     # If it already exists in the list, remove the original
     for property_name in expanded_property_names:
@@ -238,6 +240,31 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     
     I decided that 'shorthandables' was a word.  Use it at will."""
     
+    # Scan through the properties. Everytime we find a shorthand version, verify
+    # all properties defined beforehand to see if they contain property names that
+    # this shorthand would overwrite. If this is the case, keep track of these
+    # properties so that we can remove them after.
+    to_remove = set()
+    processed = []
+    for property in self.properties:
+      prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
+      if ShorthandHandler.is_shorthand(prop_name):
+        props_to_nuke = ShorthandHandler.get_all_expand_properties(prop_name)
+        for p_nuke in props_to_nuke:
+          if p_nuke in processed:
+            to_remove.add(processed.index(p_nuke))
+      
+      processed.append(prop_name)
+    
+    # Remove the properties that would get overwritten.
+    if to_remove:
+      to_remove = list(to_remove)
+      to_remove.sort()
+      
+      for idx in to_remove[::-1]:
+        self.properties.pop(idx)
+    
+    # Create the shorthand if it's possible (removing the originals)
     for shorthand, shorthand_blocks in PROPERTY_SHORTHANDS.iteritems():
       for blk in shorthand_blocks:
         style = blk[0]
