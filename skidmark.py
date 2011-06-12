@@ -203,9 +203,9 @@ class SkidmarkCSS(object):
       self._update_log_indent(-1)
       
     self._create_outfile(css_str)
-      
+    
     self._log("=" * 72)
-    self._log("Completed processing %s" % ( self.s_infile, ))
+    self._log("Completed processing %s, generated %d bytes" % ( self.s_infile, len(css_str) ))
     
     return
     

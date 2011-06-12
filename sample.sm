@@ -16,29 +16,14 @@ div {
   
   @@use box($width, $height, blue, black);
   border-width: 12px;
+  opacity: 0.5;
 }
 
 div {
-  padding-top: 2px;
-  padding-right: 2px;
-  padding-bottom: 2px;
-  padding-left: 2px;
-  
-  font-weight: bold;
-  font-style: italic;
-  font-variant: small-caps;
-  font-size: 1em;
-  line-height: 1.5em;
-  font-family: verdana,sans-serif;
-  
   background-color: #fff;
   background-image: url(image.gif);
   background-repeat: no-repeat;
   background-position: top left; 
-  
-  list-style-type: disc;
-  list-style-position: outside;
-  list-style-image: url(image.gif);
   
   border-width: 1px;
   border-color: black;
@@ -48,5 +33,23 @@ div {
   border-right-color: black;
   border-right-style: solid;
   
-  background: red;
+  font-weight: bold;
+  font-style: italic;
+  font-variant: small-caps;
+  font-size: 1em;
+  font-family: verdana,sans-serif;
+  line-height: 1.5em;
+  
+  list-style-type: disc;
+  list-style-position: outside;
+  list-style-image: url(image.gif);
+  
+  outline-width: 1px;
+  outline-style: dotted;
+  outline-color: #0000ff;
+
+  padding-top: 2px;
+  padding-right: 2px;
+  padding-bottom: 2px;
+  padding-left: 2px;
 }

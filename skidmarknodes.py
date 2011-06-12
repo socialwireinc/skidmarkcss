@@ -6,6 +6,7 @@ from propertyexpandables import PROPERTY_EXPANDABLES
 from propertyexpandables import PROPERTY_SHORTHANDS
 from propertyexpandables import PROPERTIES_AVAILABLE_FOR_SHORTHAND
 from propertyexpandables import ShorthandHandler
+from propertyexpandables import ExpandableHandler
 
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
@@ -163,7 +164,7 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     expandables = [ property_name ] + PROPERTY_EXPANDABLES.get(property_name, [])
     return expandables
   
-  def add_property(self, property, bypass_expand=False):
+  def add_property(self, property, bypass_expand=False, position=-1):
     """Add a property to the declaration block"""
     
     # Verify if this property already exists, if it does we need to pop it out
@@ -177,8 +178,11 @@ class n_DeclarationBlock(SkidmarkHierarchy):
       
       if properties_to_add:
         for p_name, p_value in properties_to_add:
-          new_property = "%s: %s" % ( p_name, p_value )
-          self.add_property(new_property)
+          if p_value is None:
+            self.remove_property(p_name)
+          else:
+            new_property = "%s: %s" % ( p_name, p_value )
+            self.add_property(new_property)
         
         return
     
@@ -194,7 +198,15 @@ class n_DeclarationBlock(SkidmarkHierarchy):
         property_position = property_names.index(property_name)
         self.properties.pop(property_position)
       
-      self.properties.append(property.replace(prop_name, property_name))
+      if callable(property_name):
+        new_property = property_name(prop_value)
+      else:
+        new_property = property.replace(prop_name, property_name)
+      
+      if position >= 0:
+        self.properties.insert(position, new_property)
+      else:
+        self.properties.append(new_property)
     
     return
   
@@ -263,6 +275,7 @@ class n_DeclarationBlock(SkidmarkHierarchy):
       
       for idx in to_remove[::-1]:
         self.properties.pop(idx)
+        processed.pop(idx)
     
     # Create the shorthand if it's possible (removing the originals)
     for shorthand, shorthand_blocks in PROPERTY_SHORTHANDS.iteritems():
@@ -271,8 +284,12 @@ class n_DeclarationBlock(SkidmarkHierarchy):
         block_values = [ self.has_property(property_name) for property_name in blk[1:] ]
         shorthand_property = ShorthandHandler.process(style, shorthand, block_values)
         if shorthand_property:
-          self.add_property(shorthand_property, bypass_expand=True)
+          properties_to_check = [ p_name for p_name in ShorthandHandler.get_all_expand_properties(shorthand) if p_name not in blk[1:] ]
+          positions = [ processed.index(p_name) for p_name in properties_to_check if p_name in processed ] + [-1]
+          
+          self.add_property(shorthand_property, bypass_expand=True, position=positions[0])
           self.remove_property(blk)
+          break
     
     return
   

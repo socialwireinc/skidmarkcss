@@ -27,13 +27,16 @@ class ShorthandHandler(object):
         block_values = block[1:]
         
         if style == PROPERTY_SHORTHAND_TYPE_STANDARD4:
-          properties = cls.expand_standard4(block_values, prop_value)
+          properties = cls.expand_standard4(block_values, prop_name, prop_value)
         elif style == PROPERTY_SHORTHAND_TYPE_PASSTHRU:
-          properties = cls.expand_passthru(block_values, prop_value)
+          properties = cls.expand_passthru(block_values, prop_name, prop_value)
         elif style == PROPERTY_SHORTHAND_TYPE_CUSTOM:
           fn_name = "expand_%s" % ( prop_name.replace("-", "_"), )
           if hasattr(cls, fn_name):
             properties = getattr(cls, fn_name)(block_values, prop_value)
+        
+        if properties:
+          break
     
     return properties
   
@@ -104,10 +107,14 @@ class ShorthandHandler(object):
     """Custom handler for the 'font' shorthand"""
     
     shorthand_property = None
-    if len(block_values) == 5:
-      shorthand_property = "%s: %s/%s %s %s %s" % tuple([shorthand] + block_values)
-    elif len(block_values) == 6:
+    if len(block_values) == 6:
       shorthand_property = "%s: %s %s %s %s/%s %s" % tuple([shorthand] + block_values)
+    elif len(block_values) == 5:
+      shorthand_property = "%s: %s %s %s/%s %s" % tuple([shorthand] + block_values)
+    elif len(block_values) == 3:
+      shorthand_property = "%s: %s/%s %s" % tuple([shorthand] + block_values)
+    elif len(block_values) == 2:
+      shorthand_property = "%s: %s %s" % tuple([shorthand] + block_values)
     
     return shorthand_property
   
@@ -116,16 +123,25 @@ class ShorthandHandler(object):
   #
   
   @classmethod
-  def expand_passthru(cls, block_values, prop_value):
+  def expand_passthru(cls, block_values, prop_name, prop_value):
     values = prop_value.split(" ", len(block_values))
     if len(block_values) == len(values):
-      return zip(block_values, values)
+      all_properties = cls.get_all_expand_properties(prop_name)
+      return zip(block_values, values) + [ (p_name, None) for p_name in all_properties if p_name not in block_values ]
     return None
   
   @classmethod
-  def expand_standard4(cls, block_values, prop_value):
-    #print prop_value, block_values
+  def expand_standard4(cls, block_values, prop_name, prop_value):
     return None
+
+class ExpandableHandler(object):
+  def __init__(self):
+    pass
+  
+  @classmethod
+  def ie_opacity(cls, value):
+    value = float(value)
+    return "filter: alpha(opacity=%d)" % ( int(value * 100), )
 
 
 PROPERTY_EXPANDABLES = {
@@ -136,21 +152,45 @@ PROPERTY_EXPANDABLES = {
     "-moz-border-radius",
     "-webkit-border-radius"
   ],
+  
   "border-top-left-radius": [
     "-moz-border-radius-topleft",
     "-webkit-border-top-left-radius"
   ],
+  
   "border-top-right-radius": [
     "-moz-border-radius-topright",
     "-webkit-border-top-right-radius"
   ],
+  
   "border-bottom-left-radius": [
     "-moz-border-radius-bottomleft",
     "-webkit-border-bottom-left-radius"
   ],
+  
   "border-bottom-right-radius": [
     "-moz-border-radius-bottomright",
     "-webkit-border-bottom-right-radius"
+  ],
+  
+  #
+  # transition
+  #
+  
+  "transition": [
+    "-webkit-transition",
+    "-moz-transition",
+    "-o-transition"
+  ],
+  
+  #
+  # opacity
+  #
+  
+  "opacity": [
+    "-moz-opacity",
+    "-khtml-opacity",
+    ExpandableHandler.ie_opacity
   ]
 }
 
@@ -180,48 +220,110 @@ PROPERTY_SHORTHANDS = {
       "border-top-color", "border-right-color", "border-bottom-color", "border-left-color" ],
   ],
   
+  "outline": [
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "outline-width", "outline-style", "outline-color" ]
+  ],
+  
   "border": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "border-width", "border-style", "border-color" ]
+      "border-width", "border-style", "border-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-style", "border-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-style" ],
   ],
   
   "border-top": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "border-top-width", "border-top-color", "border-top-style" ]
+      "border-top-width", "border-top-style", "border-top-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-top-style", "border-top-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-top-style" ]
   ],
   
   "border-right": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "border-right-width", "border-right-color", "border-right-style" ]
+      "border-right-width", "border-right-style", "border-right-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-right-style", "border-right-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-right-style" ]
   ],
   
   "border-bottom": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "border-bottom-width", "border-bottom-color", "border-bottom-style" ]
+      "border-bottom-width", "border-bottom-style", "border-bottom-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-bottom-style", "border-bottom-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-bottom-style" ]
   ],
   
   "border-left": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "border-left-width", "border-left-color", "border-left-style" ]
+      "border-left-width", "border-left-style", "border-left-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-left-style", "border-left-color" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "border-left-style" ],
+    
   ],
   
   "font": [
     [ PROPERTY_SHORTHAND_TYPE_CUSTOM,
-      "font-weight", "font-style", "font-variant", "font-size", "line-height", "font-family" ],
-      
+      "font-style", "font-variant", "font-weight", "font-size", "line-height", "font-family" ],
+    
     [ PROPERTY_SHORTHAND_TYPE_CUSTOM,
-      "font-size", "line-height", "font-weight", "font-style", "font-family" ],
+      "font-style", "font-weight", "font-size", "line-height", "font-family" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_CUSTOM,
+      "font-size", "line-height", "font-family" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_CUSTOM,
+      "font-size", "font-family" ]
   ],
   
   "background": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "background-color", "background-image", "background-repeat", "background-attachment", "background-position" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
       "background-color", "background-image", "background-repeat", "background-position" ],
+      
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "background-image", "background-position" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "background-color" ]
   ],
   
   "list-style": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "list-style-type", "list-style-position", "list-style-image" ]
+      "list-style-type", "list-style-position", "list-style-image" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "list-style-type", "list-style-position" ],
+    
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "list-style-type" ]
   ],
+  
+  "transition": [
+    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
+      "transition-property", "transition-duration", "transition-timing-function", "transition-delay" ]
+  ]
 }
 
 # Create a reverse mapping
