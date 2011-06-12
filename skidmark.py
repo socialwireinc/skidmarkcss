@@ -557,7 +557,7 @@ class SkidmarkCSS(object):
     parameters = data[1:-1]
     declaration_node = data[-1]
     
-    params = [ parameter[1] or "" for parameter in parameters ]    
+    params = [ parameter[1] or "" for parameter in parameters ]
     if len(params) == 1 and not params[0]:
       params = []
     
@@ -573,7 +573,14 @@ class SkidmarkCSS(object):
     template_name = data[0]
     parameters = data[1:]
     
-    params = [ parameter[1] or "" for parameter in parameters ]
+    params_raw = [ parameter[1] or "" for parameter in parameters ]
+    params = []
+    for param in params_raw:
+      if type(param) is str and param[0] in ("'", '"') and param[0] == param[-1] and len(param) > 1:
+        params.append(param[1:-1])
+      else:
+        params.append(param)
+    
     if len(params) == 1 and not params[0]:
       params = []
     
@@ -582,7 +589,7 @@ class SkidmarkCSS(object):
     # Verify that this template has been defined
     if not template:
       raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
-      
+    
     # Verify that parameters
     if not template.params_are_valid(params):
       # It would be ideal if we could identify the line number, but I don't think it's possible with a properly parsed pypeg file
