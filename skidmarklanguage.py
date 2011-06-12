@@ -27,6 +27,7 @@ t_constant = "[^ \n\r();*/+-]+"
 t_import_rule = "\@import\s+url\s*[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
 t_comment = r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/"
+t_param = "[a-zA-Z0-9#.]+|" + t_string + "|" + t_variable
 
 # Compiled RegExp
 rec = re.compile
@@ -41,7 +42,7 @@ re_ident = rec(t_ident)
 re_import_rule = rec(t_import_rule)
 re_math = rec(t_math)
 re_name = rec(t_name)
-re_param = rec(r"[^,)]*")  # TODO: a param may be quoted and accept commas
+re_param = rec(t_param)
 re_propertyvalue = rec(r"[^;}]*")
 re_string = rec(t_string)
 re_variable = rec(t_variable)
