@@ -25,6 +25,7 @@ t_class = "\\." + t_ident
 t_variable = "\$[_A-Za-z0-9]+"
 t_constant = "[^ \n\r();*/+-]+"
 t_import_rule = "\@import\s+url\s*[^;]*;"
+t_charset_rule = "\@charset\s+[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
 t_comment = r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/"
 t_param = "[a-zA-Z0-9#.]+|" + t_string + "|" + t_variable
@@ -40,12 +41,22 @@ re_element_name = rec(p(t_ident) + "|\\*")
 re_hash = rec(t_hash)
 re_ident = rec(t_ident)
 re_import_rule = rec(t_import_rule)
+re_charset_rule = rec(t_charset_rule)
 re_math = rec(t_math)
 re_name = rec(t_name)
 re_param = rec(t_param)
 re_propertyvalue = rec(r"[^;}]*")
 re_string = rec(t_string)
 re_variable = rec(t_variable)
+
+def import_rule():
+  return re_import_rule
+
+def charset_rule():
+  return re_charset_rule
+
+def builtin_css_directives():
+  return [ import_rule, charset_rule ]
 
 def variable_set():
   return variable(), "=", [ math_operation, constant, variable ], ";"
@@ -69,14 +80,11 @@ def math_op():
   return re_math
 
 def template():
-  return "@@template ", function(), declarationblock
+  return "@@template ", function_declaration(), declarationblock
   
 def use():
   return "@@use ", function(), ";"
   
-def import_rule():
-  return re_import_rule
-
 def hash():
   return re_hash
 
@@ -96,6 +104,15 @@ def function():
   return ident(), "(", ZERO_OR_ONE, param_list(), ")"
 
 def param_list():
+  return ZERO_OR_ONE, arg(), ZERO_OR_MORE, (",", arg())
+  
+def arg():
+  return [ math_operation, param ]
+  
+def function_declaration():
+  return ident(), "(", ZERO_OR_ONE, param_list_declaration(), ")"
+
+def param_list_declaration():
   return ZERO_OR_ONE, param, ZERO_OR_MORE, (",", param)
   
 def param():
@@ -153,4 +170,4 @@ def declaration():
   return full_selector(), declarationblock
   
 def language():
-  return ZERO_OR_MORE, [ import_rule, declaration, directive, comment, template, variable_set ]
+  return ZERO_OR_MORE, [ builtin_css_directives(), declaration, directive, comment, template, variable_set ]

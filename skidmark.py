@@ -376,6 +376,24 @@ class SkidmarkCSS(object):
     
     return self.math_ops
   
+  @classmethod
+  def get_number_parts(cls, number):
+    """Retrieve the number and measurement.
+    Example: "12px" -> ( "12", "px" )"""
+    
+    num_cast = { True: float, False: int }
+    
+    mo = SkidmarkCSS.re_number.match(number)
+    if mo and mo.group():
+      value = num_cast["." in mo.group()](mo.group())
+    else:
+      value = 0
+    
+    s = number.split(str(value))
+    if len(s) == 2:
+      return value, s[1].strip()
+    return value, ""
+
   
   #
   # Node Processors: What runs through the AST
@@ -555,6 +573,11 @@ class SkidmarkCSS(object):
     """Processor for the '@import url();' rule"""
     
     return n_TextNode(parent, data)
+    
+  def _nodeprocessor_charset_rule(self, data, parent):
+    """Processor for the '@charset' rule"""
+    
+    return n_TextNode(parent, data)
   
   def _nodeprocessor_template(self, data, parent):
     """Define a template that may be reused several times throughout this CSS"""
@@ -579,7 +602,7 @@ class SkidmarkCSS(object):
     template_name = data[0]
     parameters = data[1:]
     
-    params_raw = [ parameter[1] or "" for parameter in parameters ]
+    params_raw = [ self._process_node(parameter) or "" for parameter in parameters ]
     params = []
     for param in params_raw:
       if type(param) is str and param[0] in ("'", '"') and param[0] == param[-1] and len(param) > 1:
@@ -716,24 +739,6 @@ class SkidmarkCSS(object):
         seq.append(self._process_node(item))
         
     return seq
-  
-  @classmethod
-  def get_number_parts(cls, number):
-    """Retrieve the number and measurement.
-    Example: "12px" -> ( "12", "px" )"""
-    
-    num_cast = { True: float, False: int }
-    
-    mo = SkidmarkCSS.re_number.match(number)
-    if mo and mo.group():
-      value = num_cast["." in mo.group()](mo.group())
-    else:
-      value = 0
-    
-    s = number.split(str(value))
-    if len(s) == 2:
-      return value, s[1].strip()
-    return value, ""
   
   
   #
