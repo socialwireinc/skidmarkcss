@@ -1,5 +1,7 @@
 # -*- coding: latin-1 -*-
 
+"""The SkidmarkCSS preprocessor"""
+
 import copy
 import itertools
 import pyPEG
@@ -8,17 +10,55 @@ import sys
 import time
 
 import skidmarklanguage
-from skidmarknodes import *
+from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
 
-class FileNotFound(Exception): pass
-class UnrecognizedParsedTree(Exception): pass
-class UnrecognizedSelector(Exception): pass
-class Unimplemented(Exception): pass
-class ErrorInFile(Exception): pass
-class UnexpectedTreeFormat(Exception): pass
-class UndefinedTemplate(Exception): pass
-class InvalidTemplateUse(Exception): pass
-class VariableNotFound(Exception): pass
+
+#
+# Exception Classes
+#
+
+class FileNotFound(Exception):
+  """Exception used when an input file is not found. this can be the main file
+  or an included file"""
+  pass
+
+class UnrecognizedParsedTree(Exception):
+  """An error occured while parsing the tree. The tree does not have items that
+  are recognised"""
+  pass
+
+class UnrecognizedSelector(Exception):
+  """A selector is not recognised"""
+  pass
+
+class Unimplemented(Exception):
+  """While parsing the tree we came across something that was not implemented"""
+  pass
+
+class ErrorInFile(Exception):
+  """There was an error parsin the file"""
+  pass
+
+class UnexpectedTreeFormat(Exception):
+  """The format of the tree was not what was expected"""
+  pass
+
+class UndefinedTemplate(Exception):
+  """The requested template could not be loaded"""
+  pass
+
+class InvalidTemplateUse(Exception):
+  """There is an error in the @@use call"""
+  pass
+
+class VariableNotFound(Exception):
+  """A requested variable could not be found"""
+  pass
+
+
+#
+# Variables and Constants
+#
 
 TEMPLATES = {}
 VARIABLE_STACK = []
@@ -57,6 +97,11 @@ OUTPUT_TEMPLATE_COMBINATOR = {
   CSS_OUTPUT_COMPACT : " %s",
   CSS_OUTPUT_CLEAN : " %s"
 }
+
+
+#
+# The Class that makes it all happen!
+#
 
 class SkidmarkCSS(object):
   re_variable = re.compile(skidmarklanguage.t_variable)

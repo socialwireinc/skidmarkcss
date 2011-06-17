@@ -1,16 +1,34 @@
 # -*- coding: latin-1 -*-
 
-PROPERTY_SHORTHAND_TYPE_STANDARD4 = "standard4"
-PROPERTY_SHORTHAND_TYPE_PASSTHRU = "passthru"
-PROPERTY_SHORTHAND_TYPE_CUSTOM = "custom"
+"""Classes and constants used to properly handle EXPANDABLES (one property that becomes many, as with 'opacity')
+and SHORTHANDS (multiple properties that can be combined into a single one)"""
+
+#
+# The Objects
+#
 
 class ShorthandHandler(object):
   """This object contains classmethods that are responsible for determining
   and returning the shorthand version of properties if all the elements to
   be able to do so are present"""
   
+  PROPERTIES_AVAILABLE_FOR_SHORTHAND = None
+  
   def __init__(self):
     pass
+  
+  @classmethod
+  def get_properties_available_for_shorthand(cls):
+    # Create a reverse mapping
+    if cls.PROPERTIES_AVAILABLE_FOR_SHORTHAND is None:
+      PROPERTIES_AVAILABLE_FOR_SHORTHAND = []
+      
+      for block_lists in PROPERTY_SHORTHANDS.values():
+        for block in block_lists:
+          PROPERTIES_AVAILABLE_FOR_SHORTHAND.extend(block[1:])
+      cls.PROPERTIES_AVAILABLE_FOR_SHORTHAND = list(set(PROPERTIES_AVAILABLE_FOR_SHORTHAND))
+    
+    return cls.PROPERTIES_AVAILABLE_FOR_SHORTHAND
   
   @classmethod
   def is_shorthand(cls, prop_name):
@@ -124,6 +142,8 @@ class ShorthandHandler(object):
   
   @classmethod
   def expand_passthru(cls, block_values, prop_name, prop_value):
+    """Expand the passthru format"""
+    
     values = prop_value.split(" ", len(block_values))
     if len(block_values) == len(values):
       all_properties = cls.get_all_expand_properties(prop_name)
@@ -132,9 +152,13 @@ class ShorthandHandler(object):
   
   @classmethod
   def expand_standard4(cls, block_values, prop_name, prop_value):
+    """Expand the standard4 format: unimplemented at the moment"""
+    
     return None
 
 class ExpandableHandler(object):
+  """Object that handles expandables"""
+  
   def __init__(self):
     pass
   
@@ -143,6 +167,14 @@ class ExpandableHandler(object):
     value = float(value)
     return "filter: alpha(opacity=%d)" % ( int(value * 100), )
 
+
+#
+# Constants
+#
+
+PROPERTY_SHORTHAND_TYPE_STANDARD4 = "standard4"
+PROPERTY_SHORTHAND_TYPE_PASSTHRU = "passthru"
+PROPERTY_SHORTHAND_TYPE_CUSTOM = "custom"
 
 PROPERTY_EXPANDABLES = {
   #
@@ -325,11 +357,3 @@ PROPERTY_SHORTHANDS = {
       "transition-property", "transition-duration", "transition-timing-function", "transition-delay" ]
   ]
 }
-
-# Create a reverse mapping
-PROPERTIES_AVAILABLE_FOR_SHORTHAND = []
-for block_lists in PROPERTY_SHORTHANDS.values():
-  for block in block_lists:
-    PROPERTIES_AVAILABLE_FOR_SHORTHAND.extend(block[1:])
-PROPERTIES_AVAILABLE_FOR_SHORTHAND = list(set(PROPERTIES_AVAILABLE_FOR_SHORTHAND))
-

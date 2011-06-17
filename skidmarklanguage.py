@@ -1,5 +1,7 @@
 # -*- coding: latin-1 -*-
 
+"""The pyPEG language that defines SkidmarkCSS"""
+
 import re
 
 # pyPEG-specific

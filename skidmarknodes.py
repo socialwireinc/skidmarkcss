@@ -1,12 +1,10 @@
 # -*- coding: latin-1 -*-
 
+"""Definition for all the node objects, converted from the pyPEG AST"""
+
 import copy
 
-from propertyexpandables import PROPERTY_EXPANDABLES
-from propertyexpandables import PROPERTY_SHORTHANDS
-from propertyexpandables import PROPERTIES_AVAILABLE_FOR_SHORTHAND
-from propertyexpandables import ShorthandHandler
-from propertyexpandables import ExpandableHandler
+from propertyexpandables import PROPERTY_EXPANDABLES, PROPERTY_SHORTHANDS, ShorthandHandler, ExpandableHandler
 
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
@@ -189,9 +187,10 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     expanded_property_names = n_DeclarationBlock._expand_property(self, prop_name)
     property_names = [ n_DeclarationBlock.get_property_parts(prop)[0] for prop in self.properties ]
     
+    props_available_for_shorthand = ShorthandHandler.get_properties_available_for_shorthand()
     # If it already exists in the list, remove the original
     for property_name in expanded_property_names:
-      if not self.requires_shorthand_check and property_name in PROPERTIES_AVAILABLE_FOR_SHORTHAND:
+      if not self.requires_shorthand_check and property_name in props_available_for_shorthand:
         self.requires_shorthand_check = True
       
       if property_name in property_names:
