@@ -524,7 +524,7 @@ class SkidmarkCSS(object):
   def _nodeprocessor_directive(self, data, parent):
     """Node Processor: directive"""
     
-    function_name, param_list = ( data[0], [ _[1].strip() for _ in data[1:] if _ and _[1] and _[1].strip() ] )
+    function_name, param_list = ( data[0], [ self._process_node(node) for node in data[1:] ] )
     fn_name = "".join([ "_directive_", function_name ])
     
     self._update_log_indent(+1)
@@ -539,6 +539,12 @@ class SkidmarkCSS(object):
     
     self._update_log_indent(-1)
     return directive_result
+  
+  def _nodeprocessor_param(self, data, parent):
+    if type(data) is str:
+      return data
+    
+    raise Unimplemented("param argument unknown: %s" % ( str(data), ))
   
   def _nodeprocessor_comment(self, data, parent):
     """Node Processor: comment"""
