@@ -1,5 +1,5 @@
-@include(variables.sm);
-@include(templates.sm);
+@include("./variables.sm");
+@include("templates.sm");
 
 #page {
   margin: 0 auto;

@@ -4,6 +4,7 @@
 
 import copy
 import itertools
+import os
 import pyPEG
 import re
 import sys
@@ -124,6 +125,9 @@ class SkidmarkCSS(object):
     self.log_indent_level = 0
     self.math_ops = None
     
+    self.parent = parent
+    self.include_base_path = ""
+    
     if parent is not None:
       if not isinstance(parent, SkidmarkCSS):
         raise Unimplemented("SkidmarkCSS may only have another SkidmarkCSS as a parent")
@@ -191,6 +195,16 @@ class SkidmarkCSS(object):
     self._update_log_indent(+1)
     self._log("Reading file contents")
     self._update_log_indent(-1)
+    
+    src_dir, src_filename = os.path.split(self.s_infile)
+    
+    if isinstance(self.parent, SkidmarkCSS):
+      base_path = self.parent.include_base_path
+    else:
+      self.include_base_path = src_dir
+      base_path = src_dir
+    
+    self.s_infile = os.path.join(os.path.join(*os.path.split(base_path)), os.path.join(*os.path.split(self.s_infile)))
     
     try:
       src = open(self.s_infile, "rb").read()
@@ -602,6 +616,9 @@ class SkidmarkCSS(object):
     
     self._update_log_indent(-1)
     return directive_result
+  
+  def _nodeprocessor_string(self, data, parent):
+    return data
   
   def _nodeprocessor_param(self, data, parent):
     if type(data) is str:
