@@ -268,9 +268,12 @@ class SkidmarkCSS(object):
     
     return
     
-  def _generate_css(self, tree):
+  def _generate_css(self, tree=None):
     """Builds the output CSS
     Returns a list (each line of the CSS output)"""
+    
+    if tree is None:
+      tree = self.get_processed_tree()
     
     # The outer level of the tree should be a list
     if type(tree) is not list:
@@ -928,6 +931,41 @@ class MathOperations(object):
     
     return L
 
+
+# ----------------------------------------------------------------------------
+
+def simple_process_file(infile):
+  try:
+    sm = SkidmarkCSS(infile, verbose=False, output_format=CSS_OUTPUT_CLEAN)
+    print "\n".join(sm._generate_css())
+  except:
+    err = """body:before { content: \""""
+    try:
+      raise
+    except Unimplemented, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except UnrecognizedParsedTree, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except UnexpectedTreeFormat, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except ErrorInFile, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except UnrecognizedSelector, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except FileNotFound, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except UndefinedTemplate, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except InvalidTemplateUse, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except VariableNotFound, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    except Exception, e:
+      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
+    finally:
+      err += """\"; }"""
+   
+    print err
 
 # ----------------------------------------------------------------------------
 
