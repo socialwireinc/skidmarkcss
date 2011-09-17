@@ -192,25 +192,31 @@ class SkidmarkCSS(object):
   def _get_file_src(self):
     """Reads the byte content of self.s_infile and returns it as a string"""
     
-    self._update_log_indent(+1)
-    self._log("Reading file contents")
-    self._update_log_indent(-1)
-    
-    src_dir, src_filename = os.path.split(self.s_infile)
-    
-    if isinstance(self.parent, SkidmarkCSS):
-      base_path = self.parent.include_base_path
-    else:
-      self.include_base_path = src_dir
-      base_path = src_dir
-    
-    self.s_infile = os.path.join(os.path.join(*os.path.split(base_path)), os.path.join(*os.path.split(self.s_infile)))
-    
-    try:
-      src = open(self.s_infile, "rb").read()
-    except IOError:
-      raise FileNotFound(self.s_infile)
-    return src
+    if isinstance(self.s_infile, basestring):
+      self._update_log_indent(+1)
+      self._log("Reading file contents")
+      self._update_log_indent(-1)
+      
+      src_dir, src_filename = os.path.split(self.s_infile)
+      
+      if isinstance(self.parent, SkidmarkCSS):
+        base_path = self.parent.include_base_path
+      else:
+        self.include_base_path = src_dir
+        base_path = src_dir
+      
+      self.s_infile = os.path.join(os.path.join(*os.path.split(base_path)), os.path.join(*os.path.split(self.s_infile)))
+      
+      try:
+        src = open(self.s_infile, "rb").read()
+      except IOError:
+        raise FileNotFound(self.s_infile)
+      return src
+
+    if hasattr(self.s_infile, 'read') and callable(self.s_infile.read):
+      return self.s_infile.read()
+
+    raise TypeError("s_infile must be a filename (string) or file-like object.")
 
   def _process(self):
     """Processes the AST that has been generated in __init__"""
@@ -470,7 +476,7 @@ class SkidmarkCSS(object):
       
       # If the node is an empty string, it is because we processed a comment in the source.
       # Ignore it.  Only process those that don't fit this criteria.
-      if not (type(node) is str and not node):
+      if not (isinstance(node, basestring) and not node):
         declarations.append(node)
     
     return declarations
@@ -569,7 +575,7 @@ class SkidmarkCSS(object):
     
     for node_data in data:
       property = self._process_node(node_data, oDeclarationBlock)
-      if property and type(property) is str:
+      if property and isinstance(property, basestring):
         if isinstance(parent, n_Declaration):
           property = self.update_property(property)
         
@@ -624,7 +630,7 @@ class SkidmarkCSS(object):
     return data
   
   def _nodeprocessor_param(self, data, parent):
-    if type(data) is str:
+    if isinstance(data, basestring):
       return data
     
     raise Unimplemented("param argument unknown: %s" % ( str(data), ))
@@ -670,7 +676,7 @@ class SkidmarkCSS(object):
     params_raw = [ self._process_node(parameter) or "" for parameter in parameters ]
     params = []
     for param in params_raw:
-      if type(param) is str and param[0] in ("'", '"') and param[0] == param[-1] and len(param) > 1:
+      if isinstance(param,basestring) and param[0] in ("'", '"') and param[0] == param[-1] and len(param) > 1:
         params.append(param[1:-1])
       else:
         params.append(param)
@@ -772,7 +778,7 @@ class SkidmarkCSS(object):
   def _nodeprocessor_constant(self, data, parent):
     """A constant -- not much to process here"""
     
-    if type(data) is str:
+    if isinstance(data,basestring):
       if data.startswith("$"):
         # Return the value. An exception will be raised if the variable doesn't exist!
         return self.get_variable_value(data)
@@ -798,7 +804,7 @@ class SkidmarkCSS(object):
     
     seq = []
     for item in data:
-      if type(item) is str:
+      if isinstance(item,basestring):
         seq.append(item)
       else:
         seq.append(self._process_node(item))
@@ -814,7 +820,7 @@ class SkidmarkCSS(object):
     """Include a seperate file, inline, as if all the lines were local
     Returns the processed tree (list) of the parsed AST"""
     
-    if type(filename) is str:
+    if isinstance(filename, basestring):
       if filename.startswith('"') and filename.endswith('"'):
         filename = filename[1:-1]
       elif filename.startswith("'") and filename.endswith("'"):
