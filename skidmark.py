@@ -9,6 +9,7 @@ import pyPEG
 import re
 import sys
 import time
+import StringIO
 
 import skidmarklanguage
 from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
@@ -358,7 +359,10 @@ class SkidmarkCSS(object):
       self._log("Generating %s" % ( self.s_outfile or "CSS to stdout", ))
     
     if self.s_outfile:
-      open(self.s_outfile, "wt").write(css_text + "\n")
+      if isinstance(self.s_outfile, StringIO.StringIO):
+        self.s_outfile.write(css_text + "\n")
+      else:
+        open(self.s_outfile, "wt").write(css_text + "\n")
     
     if self.printcss:
       sys.stdout.write(css_text + "\n")
@@ -973,7 +977,72 @@ def simple_process_file(infile):
    
     print err
 
-# ----------------------------------------------------------------------------
+def processFromString(src_str, **kw):
+  """Parse the SkidmarkCSS supplied as a string and returns the CSS as a string"""
+  
+  infile = StringIO.StringIO(src_str)
+  outfile = StringIO.StringIO()
+  params = dict([ (k, v) for k, v in kw.iteritems() if k not in ["infile", "outfile"] ])
+  params['return_err'] = True
+  err = execute_sm(infile=infile, outfile=outfile, **params)
+  
+  return ( outfile.getvalue(), err )
+
+def execute_sm(**kw):
+  infile = kw.get('infile')
+  outfile = kw.get('outfile')
+  verbose = kw.get('verbose')
+  timer = kw.get('timer', False)
+  printcss = kw.get('printcss', False)
+  output_format = kw.get('output_format', CSS_OUTPUT_COMPRESSED)
+  show_hierarchy = kw.get('show_hierarchy', False)
+  simplify_output = kw.get('simplify_output', True)
+  
+  err = []
+  
+  try:
+    sm = SkidmarkCSS(infile,
+                     s_outfile=outfile,
+                     verbose=verbose,
+                     timer=timer,
+                     printcss=printcss,
+                     output_format=output_format,
+                     show_hierarchy=show_hierarchy,
+                     simplify_output=simplify_output)
+  except:
+    err.append("-=" * (72/2))
+    try:
+      raise
+    except Unimplemented, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except UnrecognizedParsedTree, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except UnexpectedTreeFormat, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except ErrorInFile, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except UnrecognizedSelector, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except FileNotFound, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except UndefinedTemplate, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except InvalidTemplateUse, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except VariableNotFound, e:
+      err.append("%s: %s" % ( e.__class__.__name__, str(e) ))
+    except Exception, e:
+      raise
+    finally:
+      err.append("-=" * (72/2))
+  
+  err = "\n".join(err)
+  if kw.get("return_err"):
+    return err
+  
+  print err
+  
+  return
 
 def get_arguments():
   import argparse
@@ -1013,39 +1082,12 @@ if __name__ == '__main__':
 
   if not infile:
     raise Exception("An input file is required, use -h for help")
-  
-  try:
-    sm = SkidmarkCSS(infile,
-                     s_outfile=outfile,
-                     verbose=args.verbose,
-                     timer=args.timer,
-                     printcss=args.printcss,
-                     output_format=output_format,
-                     show_hierarchy=args.hierarchy,
-                     simplify_output=args.simplify_output)
-  except:
-    print "-=" * (72/2)
-    try:
-      raise
-    except Unimplemented, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except UnrecognizedParsedTree, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except UnexpectedTreeFormat, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except ErrorInFile, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except UnrecognizedSelector, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except FileNotFound, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except UndefinedTemplate, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except InvalidTemplateUse, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except VariableNotFound, e:
-      print "%s: %s" % ( e.__class__.__name__, str(e) )
-    except Exception, e:
-      raise
-    finally:
-      print "-=" * (72/2)
+    
+  execute_sm(infile=infile,
+             outfile=outfile,
+             verbose=args.verbose,
+             timer=args.timer,
+             printcss=args.printcss,
+             output_format=output_format,
+             show_hierarchy=args.hierarchy,
+             simplify_output=args.simplify_output)
