@@ -68,36 +68,49 @@ VARIABLE_STACK = []
 CSS_OUTPUT_COMPRESSED = 0
 CSS_OUTPUT_COMPACT = 1
 CSS_OUTPUT_CLEAN = 2
+CSS_OUTPUT_SINGLELINE = 3
 SPACING_CLEAN = 2
 
 OUTPUT_TEMPLATE_DECLARATION = {
+  CSS_OUTPUT_SINGLELINE : "%s{%s}",
   CSS_OUTPUT_COMPRESSED : "%s{%s;}",
   CSS_OUTPUT_COMPACT : "%s { %s; }",
   CSS_OUTPUT_CLEAN : "%%s {\n%s%%s;\n}\n" % ( " " * SPACING_CLEAN, )
 }
 
 OUTPUT_TEMPLATE_SELECTOR_SEPARATORS = {
+  CSS_OUTPUT_SINGLELINE : ",",
   CSS_OUTPUT_COMPRESSED : ",",
   CSS_OUTPUT_COMPACT : ", ",
   CSS_OUTPUT_CLEAN : ",\n"
 }
 
 OUTPUT_TEMPLATE_PROPERTY_SEPARATORS = {
+  CSS_OUTPUT_SINGLELINE : ";",
   CSS_OUTPUT_COMPRESSED : ";",
   CSS_OUTPUT_COMPACT : "; ",
   CSS_OUTPUT_CLEAN : ";\n%s" % ( " " * SPACING_CLEAN, )
 }
 
 OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
+  CSS_OUTPUT_SINGLELINE : ":",
   CSS_OUTPUT_COMPRESSED : ":",
   CSS_OUTPUT_COMPACT : ": ",
   CSS_OUTPUT_CLEAN : ": "
 }
 
 OUTPUT_TEMPLATE_COMBINATOR = {
+  CSS_OUTPUT_SINGLELINE : "%s",
   CSS_OUTPUT_COMPRESSED : "%s",
   CSS_OUTPUT_COMPACT : " %s",
   CSS_OUTPUT_CLEAN : " %s"
+}
+
+OUTPUT_TEMPLATE_DECLARATION_SEPARATOR = {
+  CSS_OUTPUT_SINGLELINE : "",
+  CSS_OUTPUT_COMPRESSED : "\n",
+  CSS_OUTPUT_COMPACT : "\n",
+  CSS_OUTPUT_CLEAN : "\n"
 }
 
 
@@ -260,7 +273,7 @@ class SkidmarkCSS(object):
       self.verbose = verbose_mode
     
     css = self._generate_css(data)
-    css_str = "\n".join(css)
+    css_str = OUTPUT_TEMPLATE_DECLARATION_SEPARATOR[self.output_format].join(css)
     
     if self.verbose and not self.printcss:
       self._log("Generated CSS")
@@ -1062,6 +1075,7 @@ def get_arguments():
   arg_parser.add_argument("--clean", dest="format", help="Outputs the CSS in 'clean' format", action="store_const", const=CSS_OUTPUT_CLEAN)
   arg_parser.add_argument("--compact", dest="format", help="Outputs the CSS in 'compact' format (default)", action="store_const", const=CSS_OUTPUT_COMPACT)
   arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=CSS_OUTPUT_COMPRESSED)
+  arg_parser.add_argument("--singleline", dest="format", help="Outputs the CSS in 'single line' format (ultra compressed)", action="store_const", const=CSS_OUTPUT_SINGLELINE)
   arg_parser.add_argument("-ns", "--nosimplify", dest="simplify_output", help="Do not simplify the output by using shorthand notions where possible", action="store_false")
   
   return arg_parser.parse_args()
@@ -1072,7 +1086,7 @@ if __name__ == '__main__':
   infile = args.infile and args.infile[0] or None
   outfile = args.outfile and args.outfile[0] or None
   
-  if args.format in (CSS_OUTPUT_COMPRESSED, CSS_OUTPUT_COMPACT, CSS_OUTPUT_CLEAN):
+  if args.format in (CSS_OUTPUT_COMPRESSED, CSS_OUTPUT_COMPACT, CSS_OUTPUT_CLEAN, CSS_OUTPUT_SINGLELINE):
     output_format = args.format
   else:
     output_format = CSS_OUTPUT_COMPACT
