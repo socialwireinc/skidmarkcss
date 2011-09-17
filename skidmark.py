@@ -138,7 +138,7 @@ class SkidmarkCSS(object):
     self.src = ""
     self.log_indent_level = 0
     self.math_ops = None
-    
+    self.current_template_definition = None
     self.parent = parent
     self.include_base_path = ""
     
@@ -148,6 +148,7 @@ class SkidmarkCSS(object):
       self.log_indent_level = parent.log_indent_level + 1
     
     self.ast = self._parse_file()
+    
     self.processed_tree = self._process()
     self._process_output()
     
@@ -297,7 +298,7 @@ class SkidmarkCSS(object):
     
     # The outer level of the tree should be a list
     if type(tree) is not list:
-      raise UnexpectedTreeFormat("The tree format passed to the _generate_css() method is nor recognized")
+      raise UnexpectedTreeFormat("The tree format passed to the _generate_css() method is not recognized")
     
     css = []
     for node in tree:
@@ -415,6 +416,9 @@ class SkidmarkCSS(object):
     Returns the property value."""
     
     variable = variable.strip()
+    
+    if self.current_template_definition:
+      return variable
     
     if variable.startswith("$"):
       variable = variable[1:]
@@ -611,7 +615,12 @@ class SkidmarkCSS(object):
       if property_type == "propertyname":
         name = property_item.strip()
       elif property_type == "propertyvalue":
-        value = property_item.strip()
+        if isinstance(property_item, basestring):
+          value = property_item.strip()
+        elif type(property_item) is list:
+          value = self._process_node(property_item[0], parent=None)
+        else:
+          raise Unimplemented("Unrecognized value for parameter '%s', got '%s'" % ( name or '?', str(property_item) ))
       else:
         raise Unimplemented("Unknown property type '%s'" % ( property_type, ))
         
@@ -674,6 +683,10 @@ class SkidmarkCSS(object):
     parameters = data[1:-1]
     declaration_node = data[-1]
     
+    # Keep track of the template definition we are on
+    if not self.current_template_definition:
+      self.current_template_definition = template_name
+    
     params = [ parameter[1] or "" for parameter in parameters ]    
     if len(params) == 1 and not params[0]:
       params = []
@@ -681,6 +694,11 @@ class SkidmarkCSS(object):
     dec_block = self._process_node(declaration_node, parent=None)
     
     TEMPLATES[template_name] = n_Template(None, template_name, params, dec_block)
+    
+    # If we are the top-level template, then keep track that we're done!
+    if self.current_template_definition == template_name:
+      self.current_template_definition = None
+    
     return ""
   
   def _nodeprocessor_use(self, data, parent):
@@ -693,7 +711,7 @@ class SkidmarkCSS(object):
     params_raw = [ self._process_node(parameter) or "" for parameter in parameters ]
     params = []
     for param in params_raw:
-      if isinstance(param,basestring) and param[0] in ("'", '"') and param[0] == param[-1] and len(param) > 1:
+      if isinstance(param, basestring) and param[0] in ("'", '"') and param[0] == param[-1] and len(param) > 1:
         params.append(param[1:-1])
       else:
         params.append(param)
@@ -707,7 +725,7 @@ class SkidmarkCSS(object):
     if not template:
       raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
       
-    # Verify that parameters
+    # Verify the parameters
     if not template.params_are_valid(params):
       # It would be ideal if we could identify the line number, but I don't think it's possible with a properly parsed pypeg file
       raise InvalidTemplateUse("The '%s' template expects %d parameter%s, not %d" % ( template_name, len(template.params), len(template.params) != 1 and "s" or "", len(params) ))
@@ -721,12 +739,15 @@ class SkidmarkCSS(object):
     
     # Everything is good, replace all the params
     param_substitutions = zip(template.params, params)
-
+    
     properties = []
     for property in dec_block.properties:
       for search, replace in param_substitutions:
         property = property.replace(search, replace)
       properties.append(self.update_property(property))
+    
+    # TODO: We need to iterate through the children's properties as well... we don't know how
+    #       many levels the tree has, it needs to recurse through them all...
     
     # Add the properties to the parent
     if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
@@ -795,7 +816,7 @@ class SkidmarkCSS(object):
   def _nodeprocessor_constant(self, data, parent):
     """A constant -- not much to process here"""
     
-    if isinstance(data,basestring):
+    if isinstance(data, basestring):
       if data.startswith("$"):
         # Return the value. An exception will be raised if the variable doesn't exist!
         return self.get_variable_value(data)
@@ -821,7 +842,7 @@ class SkidmarkCSS(object):
     
     seq = []
     for item in data:
-      if isinstance(item,basestring):
+      if isinstance(item, basestring):
         seq.append(item)
       else:
         seq.append(self._process_node(item))

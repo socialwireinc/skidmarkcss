@@ -157,7 +157,7 @@ def propertyname():
   return re_name
 
 def propertyvalue():
-  return re_propertyvalue
+  return [ math_operation, re_propertyvalue ]
 
 def property():
   return property_unterminated(), ";"
