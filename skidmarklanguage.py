@@ -144,8 +144,14 @@ def combinator():
 def selector():
   return simple_selector(), ZERO_OR_ONE, (ZERO_OR_ONE, combinator, selector)
 
-def expansion():
+def expansion1():
   return propertyname(), "{", declarationblock(), "}"
+
+def expansion2():
+  return propertyname(), "(", declarationblock(), ")"
+
+def expansion():
+  return [ expansion1(), expansion2() ]
 
 def directive():
   return "@", function(), ";"

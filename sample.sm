@@ -13,5 +13,18 @@ div {
   
   &.special-case {
     @@use box(800px, 270px);
+    
+    background ({
+      color: red;
+      image: url(bg.png);
+      position: top left;
+    })
+    
+    a {
+      text {{
+        decoration: none;
+        align: right;
+      }}
+    }
   }
 }
