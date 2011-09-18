@@ -325,16 +325,26 @@ class n_TextNode(SkidmarkHierarchy):
 class n_Template(SkidmarkHierarchy):
   """Defines a template"""
   
-  def __init__(self, parent, name, params, declarationblock):
+  def __init__(self, parent, name, params, declarationblock_ast):
     SkidmarkHierarchy.__init__(self, parent)
     self.name = name
     self.params = params
-    self.declarationblock = declarationblock
+    self.declarationblock_ast = declarationblock_ast
   
   def __repr__(self):
     return "%s : %s" % ( SkidmarkHierarchy.__repr__(self), self.name )
   
   def params_are_valid(self, params):
+    """Validate that the number of parameters expected match the number of supplied parameters"""
+    
     if len(params) != len(self.params):
       return False
     return True
+  
+  def get_declaration_block(self, sm):
+    """Processes the AST nodes and returns the declaration block tree"""
+    
+    ast = copy.deepcopy(self.declarationblock_ast)
+    dec_block = sm._process_node(ast, parent=None)
+    
+    return dec_block

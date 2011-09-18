@@ -615,6 +615,10 @@ class SkidmarkCSS(object):
       if property_type == "propertyname":
         name = property_item.strip()
       elif property_type == "propertyvalue":
+        if type(property_item) is list and len(property_item) == 1:
+          if isinstance(property_item[0], basestring):
+            property_item = property_item[0]
+        
         if isinstance(property_item, basestring):
           value = property_item.strip()
         elif type(property_item) is list:
@@ -691,9 +695,7 @@ class SkidmarkCSS(object):
     if len(params) == 1 and not params[0]:
       params = []
     
-    dec_block = self._process_node(declaration_node, parent=None)
-    
-    TEMPLATES[template_name] = n_Template(None, template_name, params, dec_block)
+    TEMPLATES[template_name] = n_Template(None, template_name, params, declaration_node)
     
     # If we are the top-level template, then keep track that we're done!
     if self.current_template_definition == template_name:
@@ -718,8 +720,10 @@ class SkidmarkCSS(object):
     
     if len(params) == 1 and not params[0]:
       params = []
-    
+      
     template = TEMPLATES.get(template_name)
+    param_substitutions = zip(template.params, params)
+    VARIABLE_STACK[-1].update(dict([ (k[1:], v) for k, v in param_substitutions ]))
     
     # Verify that this template has been defined
     if not template:
@@ -731,14 +735,14 @@ class SkidmarkCSS(object):
       raise InvalidTemplateUse("The '%s' template expects %d parameter%s, not %d" % ( template_name, len(template.params), len(template.params) != 1 and "s" or "", len(params) ))
     
     # Clone the declaration block so that we do not alter the template
-    dec_block = template.declarationblock.clone(parent)
+    self._update_log_indent(+1)
+    self._log("T Preparing the declaration block for template '%s'" % ( template_name, ))
+    dec_block = template.get_declaration_block(self).clone(parent)
+    self._update_log_indent(-1)
     
     # Transfer the children to the proper parent
     for child in dec_block.iter_children():
       parent.add_child(child)
-    
-    # Everything is good, replace all the params
-    param_substitutions = zip(template.params, params)
     
     properties = []
     for property in dec_block.properties:

@@ -1,55 +1,17 @@
-@include("./variables.sm");
-@include("templates.sm");
-
-#page {
-  margin: 0 auto;
-  width: $page_width;
-}
-
-div {
-  $width = 1024px;
-  $height = $width * 3 / 4;
-  &.surprise {
-    $width = $width / 2;
-    @@use box($width, $height, pink, red);
+@@template box($width, $height) {
+  width: $width;
+  height: $height;
+  
+  &.doubled {
+    width: $width * 2;
+    height: $height * 2;
   }
-  
-  @@use box($width - $scroll_width, $height, blue, black);
-  border-width: 12px;
-  opacity: 0.5;
 }
 
 div {
-  background-color: #fff;
-  background-image: url(image.gif);
-  background-repeat: no-repeat;
-  background-position: top left; 
+  @@use box(300px, 250px);
   
-  border-width: 1px;
-  border-color: black;
-  border-style: solid;
-  
-  border-right-width: 1px;
-  border-right-color: black;
-  border-right-style: solid;
-  
-  font-weight: bold;
-  font-style: italic;
-  font-variant: small-caps;
-  font-size: 1em;
-  font-family: verdana,sans-serif;
-  line-height: 1.5em;
-  
-  list-style-type: disc;
-  list-style-position: outside;
-  list-style-image: url(image.gif);
-  
-  outline-width: 1px;
-  outline-style: dotted;
-  outline-color: #0000ff;
-
-  padding-top: 2px;
-  padding-right: 2px;
-  padding-bottom: 2px;
-  padding-left: 2px;
+  &.special-case {
+    @@use box(800px, 270px);
+  }
 }
