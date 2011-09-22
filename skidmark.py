@@ -782,9 +782,6 @@ class SkidmarkCSS(object):
         property = property.replace(search, replace)
       properties.append(self.update_property(property))
     
-    # TODO: We need to iterate through the children's properties as well... we don't know how
-    #       many levels the tree has, it needs to recurse through them all...
-    
     # Add the properties to the parent
     if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
       for property in properties:
