@@ -76,45 +76,45 @@ CSS_OUTPUT_SINGLELINE = 3
 SPACING_CLEAN = 2
 
 OUTPUT_TEMPLATE_DECLARATION = {
-  CSS_OUTPUT_SINGLELINE : "%s{%s}",
-  CSS_OUTPUT_COMPRESSED : "%s{%s;}",
-  CSS_OUTPUT_COMPACT : "%s { %s; }",
-  CSS_OUTPUT_CLEAN : "%%s {\n%s%%s;\n}\n" % ( " " * SPACING_CLEAN, )
+  CSS_OUTPUT_SINGLELINE: "%s{%s}",
+  CSS_OUTPUT_COMPRESSED: "%s{%s}",
+  CSS_OUTPUT_COMPACT: "%s { %s; }",
+  CSS_OUTPUT_CLEAN: "%%s {\n%s%%s;\n}\n" % ( " " * SPACING_CLEAN, )
 }
 
 OUTPUT_TEMPLATE_SELECTOR_SEPARATORS = {
-  CSS_OUTPUT_SINGLELINE : ",",
-  CSS_OUTPUT_COMPRESSED : ",",
-  CSS_OUTPUT_COMPACT : ", ",
-  CSS_OUTPUT_CLEAN : ",\n"
+  CSS_OUTPUT_SINGLELINE: ",",
+  CSS_OUTPUT_COMPRESSED: ",",
+  CSS_OUTPUT_COMPACT: ", ",
+  CSS_OUTPUT_CLEAN: ",\n"
 }
 
 OUTPUT_TEMPLATE_PROPERTY_SEPARATORS = {
-  CSS_OUTPUT_SINGLELINE : ";",
-  CSS_OUTPUT_COMPRESSED : ";",
-  CSS_OUTPUT_COMPACT : "; ",
-  CSS_OUTPUT_CLEAN : ";\n%s" % ( " " * SPACING_CLEAN, )
+  CSS_OUTPUT_SINGLELINE: ";",
+  CSS_OUTPUT_COMPRESSED: ";",
+  CSS_OUTPUT_COMPACT: "; ",
+  CSS_OUTPUT_CLEAN: ";\n%s" % ( " " * SPACING_CLEAN, )
 }
 
 OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
-  CSS_OUTPUT_SINGLELINE : ":",
-  CSS_OUTPUT_COMPRESSED : ":",
-  CSS_OUTPUT_COMPACT : ": ",
-  CSS_OUTPUT_CLEAN : ": "
+  CSS_OUTPUT_SINGLELINE: ":",
+  CSS_OUTPUT_COMPRESSED: ":",
+  CSS_OUTPUT_COMPACT: ": ",
+  CSS_OUTPUT_CLEAN: ": "
 }
 
 OUTPUT_TEMPLATE_COMBINATOR = {
-  CSS_OUTPUT_SINGLELINE : "%s",
-  CSS_OUTPUT_COMPRESSED : "%s",
-  CSS_OUTPUT_COMPACT : " %s",
-  CSS_OUTPUT_CLEAN : " %s"
+  CSS_OUTPUT_SINGLELINE: "%s",
+  CSS_OUTPUT_COMPRESSED: "%s",
+  CSS_OUTPUT_COMPACT: " %s",
+  CSS_OUTPUT_CLEAN: " %s"
 }
 
 OUTPUT_TEMPLATE_DECLARATION_SEPARATOR = {
-  CSS_OUTPUT_SINGLELINE : "",
-  CSS_OUTPUT_COMPRESSED : "\n",
-  CSS_OUTPUT_COMPACT : "\n",
-  CSS_OUTPUT_CLEAN : "\n"
+  CSS_OUTPUT_SINGLELINE: "",
+  CSS_OUTPUT_COMPRESSED: "\n",
+  CSS_OUTPUT_COMPACT: "\n",
+  CSS_OUTPUT_CLEAN: "\n"
 }
 
 
@@ -443,7 +443,7 @@ class SkidmarkCSS(object):
     self._update_log_indent(-1)
     return processor_result
   
-  def get_variable_value(self, variable):
+  def _get_variable_value(self, variable):
     """Runs through the variable stack lloking for the requested variable.
     Returns the property value."""
     
@@ -465,7 +465,7 @@ class SkidmarkCSS(object):
     raise VariableNotFound("Variable '$%s' is undefined" % ( variable, ))
   
   @classmethod
-  def get_variables_from_text(cls, text):
+  def _get_variables_from_text(cls, text):
     variables = set()
     
     mo = SkidmarkCSS.re_variable.search(text)
@@ -476,19 +476,19 @@ class SkidmarkCSS(object):
     
     return list(variables)
   
-  def update_property(self, property):
+  def _update_property(self, property):
     """Verifies the property to see if the value is a reference to a variable.
     Returns an updated property (or an unmodified property if it was not required."""
     
     prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
     
-    all_variables = SkidmarkCSS.get_variables_from_text(prop_value)
+    all_variables = SkidmarkCSS._get_variables_from_text(prop_value)
     for variable in all_variables:
-      property = property.replace(variable, self.get_variable_value(variable))
+      property = property.replace(variable, self._get_variable_value(variable))
     
     return property
   
-  def get_math_ops(self):
+  def _get_math_ops(self):
     """Returns the MathOperations class for this object. If it has not yet
     been defined it will be created before it is returned"""
     
@@ -498,7 +498,7 @@ class SkidmarkCSS(object):
     return self.math_ops
   
   @classmethod
-  def get_number_parts(cls, number):
+  def _get_number_parts(cls, number):
     """Retrieve the number and measurement.
     Example: "12px" -> ( "12", "px" )"""
     
@@ -630,7 +630,7 @@ class SkidmarkCSS(object):
       property = self._process_node(node_data, oDeclarationBlock)
       if property and isinstance(property, basestring):
         if isinstance(parent, n_Declaration):
-          property = self.update_property(property)
+          property = self._update_property(property)
         
         oDeclarationBlock.add_property(property)
     
@@ -780,7 +780,7 @@ class SkidmarkCSS(object):
     for property in dec_block.properties:
       for search, replace in param_substitutions:
         property = property.replace(search, replace)
-      properties.append(self.update_property(property))
+      properties.append(self._update_property(property))
     
     # Add the properties to the parent
     if isinstance(parent, n_DeclarationBlock) and hasattr(parent, "properties"):
@@ -811,7 +811,7 @@ class SkidmarkCSS(object):
     
     if isinstance(parent, n_DeclarationBlock) and properties:
       for property in properties:
-        property = self.update_property(property)
+        property = self._update_property(property)
         parent.add_property(property)
     
     return properties
@@ -844,7 +844,7 @@ class SkidmarkCSS(object):
   def _nodeprocessor_variable(self, data, parent):
     """Return the value of this variable"""
     
-    return self.get_variable_value(data)
+    return self._get_variable_value(data)
   
   def _nodeprocessor_constant(self, data, parent):
     """A constant -- not much to process here"""
@@ -852,7 +852,7 @@ class SkidmarkCSS(object):
     if isinstance(data, basestring):
       if data.startswith("$"):
         # Return the value. An exception will be raised if the variable doesn't exist!
-        return self.get_variable_value(data)
+        return self._get_variable_value(data)
       constant = data
     else:
       raise Unimplemented("expression '%s' in unimplemented" % ( str(data), ))
@@ -863,7 +863,7 @@ class SkidmarkCSS(object):
     """A math expression parser -- does its best!"""
 
     sequence = self._nodeprocessor_math_operation_helper(data)
-    return self.get_math_ops().reduce_group(sequence)
+    return self._get_math_ops().reduce_group(sequence)
   
   def _nodeprocessor_math_group(self, data, parent):
     """Processes a math group (math expressions found within parentheses)"""
@@ -973,8 +973,8 @@ class MathOperations(object):
         op = seq.pop(0)
         R = seq.pop(0)
         
-        Li, Lmeasure = SkidmarkCSS.get_number_parts(L)
-        Ri, Rmeasure = SkidmarkCSS.get_number_parts(R)
+        Li, Lmeasure = SkidmarkCSS._get_number_parts(L)
+        Ri, Rmeasure = SkidmarkCSS._get_number_parts(R)
 
         if not (Lmeasure == Rmeasure or not Lmeasure or not Rmeasure):
           raise Unimplemented("It is not possible to compute '%s %s %s'" % ( Lmeasure.strip(), op.strip(), Rmeasure.strip() ))
