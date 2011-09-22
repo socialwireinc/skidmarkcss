@@ -57,6 +57,10 @@ class VariableNotFound(Exception):
   """A requested variable could not be found"""
   pass
 
+class InvalidArgumentException(Exception):
+  """An invalid argument was passed to SkidmarkCSS"""
+  pass
+
 
 #
 # Variables and Constants
@@ -121,25 +125,22 @@ OUTPUT_TEMPLATE_DECLARATION_SEPARATOR = {
 class SkidmarkCSS(object):
   re_variable = re.compile(skidmarklanguage.t_variable)
   re_number = re.compile("^([-+]?(?:\d+(?:\.\d+)?|\d+))")
-
-  def __init__(self, s_infile, s_outfile=None, verbose=True, timer=False, printcss=False, output_format=CSS_OUTPUT_COMPRESSED, show_hierarchy=False, simplify_output=True, parent=None):
-    """Create the object by specifying a filename (s_infile) as an argument (string)"""
+  
+  def __init__(self, config_dict, s_infile, s_outfile=None, parent=None):
+    """Create the object by specifying a filename (s_infile) as an argument (string).
+    See the _set_defaults properties to see what params are allowed."""
     
-    start_time = time.time()
+    self._init_object(config_dict)
     
     self.s_infile = s_infile
     self.s_outfile = s_outfile
-    self.verbose = verbose
-    self.printcss = printcss
-    self.output_format = output_format
-    self.show_hierarchy = show_hierarchy
-    self.simplify_output = simplify_output
-    self.timer = timer
+    self.parent = parent
+    
+    start_time = time.time()
     self.src = ""
     self.log_indent_level = 0
     self.math_ops = None
     self.current_template_definition = None
-    self.parent = parent
     self.include_base_path = ""
     
     if parent is not None:
@@ -152,12 +153,43 @@ class SkidmarkCSS(object):
     self.processed_tree = self._process()
     self._process_output()
     
-    if timer and self.log_indent_level == 0:
+    if self.timer and self.log_indent_level == 0:
       self.verbose = True
       self._log("-> Processed '%s' in %.04f seconds" % ( s_infile, time.time() - start_time, ))
       self.verbose = verbose
     
     return
+  
+  def _set_defaults(self):
+    self.verbose = False
+    self.printcss = False
+    self.output_format = CSS_OUTPUT_COMPRESSED
+    self.show_hierarchy = False
+    self.simplify_output = True
+    self.timer = False
+  
+  def _init_object(self, config_dict):
+    self._set_defaults()
+    
+    # Raise an exception if an invalid config param is passed
+    invalid_params = [ key for key in config_dict if key not in self.__dict__ ]
+    if invalid_params:
+      raise InvalidArgumentException("Unknown argument%s: %s" % ( 
+        len(invalid_params) != 1 and "s" or "",
+        ", ".join(invalid_params)
+      ))
+    
+    self.__dict__.update(config_dict)
+  
+  def get_config_dict(self):
+    return dict(
+      verbose=self.verbose,
+      printcss=self.printcss,
+      output_format=self.output_format,
+      show_hierarchy=self.show_hierarchy,
+      simplify_output=self.simplify_output,
+      timer=self.timer
+    )
   
   def get_processed_tree(self):
     """Return the object's processed tree"""
@@ -869,14 +901,7 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(filename,
-                       s_outfile=None,
-                       output_format=self.output_format,
-                       timer=self.timer,
-                       show_hierarchy=self.show_hierarchy,
-                       verbose=self.verbose,
-                       simplify_output=self.simplify_output,
-                       parent=self)
+      sm = SkidmarkCSS(self.get_config_dict(), filename, parent=self)
       
       tree = sm.get_processed_tree()
       if tree:
@@ -1021,32 +1046,18 @@ def processFromString(src_str, **kw):
   infile = StringIO.StringIO(src_str)
   outfile = StringIO.StringIO()
   params = dict([ (k, v) for k, v in kw.iteritems() if k not in ["infile", "outfile"] ])
-  params['return_err'] = True
-  err = execute_sm(infile=infile, outfile=outfile, **params)
+  err = execute_sm(params, infile=infile, outfile=outfile, return_err=True)
   
   return ( outfile.getvalue(), err )
 
-def execute_sm(**kw):
+def execute_sm(config, **kw):
   infile = kw.get('infile')
   outfile = kw.get('outfile')
-  verbose = kw.get('verbose')
-  timer = kw.get('timer', False)
-  printcss = kw.get('printcss', False)
-  output_format = kw.get('output_format', CSS_OUTPUT_COMPRESSED)
-  show_hierarchy = kw.get('show_hierarchy', False)
-  simplify_output = kw.get('simplify_output', True)
   
   err = []
   
   try:
-    sm = SkidmarkCSS(infile,
-                     s_outfile=outfile,
-                     verbose=verbose,
-                     timer=timer,
-                     printcss=printcss,
-                     output_format=output_format,
-                     show_hierarchy=show_hierarchy,
-                     simplify_output=simplify_output)
+    sm = SkidmarkCSS(config, infile, outfile)
   except:
     err.append("-=" * (72/2))
     try:
@@ -1121,12 +1132,14 @@ if __name__ == '__main__':
 
   if not infile:
     raise Exception("An input file is required, use -h for help")
-    
-  execute_sm(infile=infile,
-             outfile=outfile,
-             verbose=args.verbose,
-             timer=args.timer,
-             printcss=args.printcss,
-             output_format=output_format,
-             show_hierarchy=args.hierarchy,
-             simplify_output=args.simplify_output)
+  
+  config = dict(
+    verbose=args.verbose,
+    timer=args.timer,
+    printcss=args.printcss,
+    output_format=output_format,
+    show_hierarchy=args.hierarchy,
+    simplify_output=args.simplify_output
+  )
+  
+  execute_sm(config, infile=infile, outfile=outfile)
