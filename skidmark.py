@@ -147,6 +147,9 @@ class SkidmarkCSS(object):
       if not isinstance(parent, SkidmarkCSS):
         raise Unimplemented("SkidmarkCSS may only have another SkidmarkCSS as a parent")
       self.log_indent_level = parent.log_indent_level + 1
+      
+      parent_src = os.path.join(*os.path.split(parent.s_infile))
+      self.include_base_path = os.path.dirname(parent_src)
     
     self.ast = self._parse_file()
     
@@ -181,8 +184,8 @@ class SkidmarkCSS(object):
     
     self.__dict__.update(config_dict)
   
-  def get_config_dict(self):
-    return dict(
+  def get_config_dict(self, **kw):
+    config = dict(
       verbose=self.verbose,
       printcss=self.printcss,
       output_format=self.output_format,
@@ -190,6 +193,12 @@ class SkidmarkCSS(object):
       simplify_output=self.simplify_output,
       timer=self.timer
     )
+    
+    for pname, pvalue in kw.iteritems():
+      if pname in config:
+        config[pname] = pvalue
+    
+    return config
   
   def get_processed_tree(self):
     """Return the object's processed tree"""
@@ -240,24 +249,38 @@ class SkidmarkCSS(object):
     """Reads the byte content of self.s_infile and returns it as a string"""
     
     if isinstance(self.s_infile, basestring):
-      self._update_log_indent(+1)
-      self._log("Reading file contents")
-      self._update_log_indent(-1)
-      
       src_dir, src_filename = os.path.split(self.s_infile)
       
-      if isinstance(self.parent, SkidmarkCSS):
-        base_path = self.parent.include_base_path
-      else:
-        self.include_base_path = src_dir
-        base_path = src_dir
+      self._update_log_indent(+1)
       
-      self.s_infile = os.path.join(os.path.join(*os.path.split(base_path)), os.path.join(*os.path.split(self.s_infile)))
+      if not isinstance(self.parent, SkidmarkCSS):
+        self.include_base_path = os.getcwd()
+      
+      os_sep = {
+        "/": "\\",
+        "\\": "/"
+      }
+      
+      if self.s_infile[0] in os_sep:
+        char_r = os.sep
+        char_s = os_sep[char_r]
+        
+        base_path = ""
+        self.s_infile = os.path.join(os.path.join(*os.path.split(base_path)), os.path.join(*os.path.split(self.s_infile.replace(char_s, char_r))))
+      else:
+        base_path = self.include_base_path
+        self.s_infile = os.path.join(os.path.join(*os.path.split(base_path)), os.path.join(*os.path.split(self.s_infile)))
+      
+      self._log("file path = %s" % ( self.s_infile, ))
+      self._log("Reading file contents")
       
       try:
         src = open(self.s_infile, "rb").read()
       except IOError:
         raise FileNotFound(self.s_infile)
+      
+      self._update_log_indent(-1)
+      
       return src
 
     if hasattr(self.s_infile, 'read') and callable(self.s_infile.read):
@@ -283,7 +306,8 @@ class SkidmarkCSS(object):
     
     # We may not get anything valuable back (an include file may simply have variable
     # definitions... no tree in that case).  Clean this up if this is the case.
-    data = [ item for item in data if item ]
+    data = [ type(item) is list and len(item) == 1 and item[0] or item for item in data if item ]
+    
     return data
   
   def _process_output(self):    
@@ -754,7 +778,9 @@ class SkidmarkCSS(object):
       params = []
       
     template = TEMPLATES.get(template_name)
+    params = [ pvalue.startswith("$") and self._get_variable_value(pvalue) or pvalue for pvalue in params ]
     param_substitutions = zip(template.params, params)
+    
     VARIABLE_STACK[-1].update(dict([ (k[1:], v) for k, v in param_substitutions ]))
     
     # Verify that this template has been defined
@@ -898,9 +924,10 @@ class SkidmarkCSS(object):
         filename = filename[1:-1]
         
       # Include the file by instantiating a new object to process it
-      sm = SkidmarkCSS(self.get_config_dict(), filename, parent=self)
+      sm = SkidmarkCSS(self.get_config_dict(printcss=False), filename, parent=self)
       
       tree = sm.get_processed_tree()
+      
       if tree:
         for branch in tree:
           branch.parent = parent
