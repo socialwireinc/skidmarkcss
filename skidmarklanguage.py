@@ -109,7 +109,7 @@ def param_list():
   return ZERO_OR_ONE, arg(), ZERO_OR_MORE, (",", arg())
   
 def arg():
-  return [ string, math_operation, param ]
+  return [ variable, string, math_operation, param ]
   
 def function_declaration():
   return ident(), "(", ZERO_OR_ONE, param_list_declaration(), ")"
@@ -159,11 +159,14 @@ def directive():
 def full_selector():
   return selector, ZERO_OR_MORE, (',',  selector )
 
+def plugin():
+  return "~", function()
+
 def propertyname():
   return re_name
 
 def propertyvalue():
-  return [ math_operation, re_propertyvalue ]
+  return [ math_operation, plugin, re_propertyvalue ]
 
 def property():
   return property_unterminated(), ";"

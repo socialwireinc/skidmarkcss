@@ -13,6 +13,8 @@ import StringIO
 
 import skidmarklanguage
 from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
+from pluginmanager import SkidmarkCSSPlugin
+from plugindefault import PropertyDarken, PropertyLighten
 
 
 #
@@ -125,8 +127,9 @@ OUTPUT_TEMPLATE_DECLARATION_SEPARATOR = {
 class SkidmarkCSS(object):
   re_variable = re.compile(skidmarklanguage.t_variable)
   re_number = re.compile("^([-+]?(?:\d+(?:\.\d+)?|\d+))")
+  plugins = {}
   
-  def __init__(self, config_dict, s_infile, s_outfile=None, parent=None):
+  def __init__(self, config_dict, s_infile, s_outfile=None, parent=None, plugins=None):
     """Create the object by specifying a filename (s_infile) as an argument (string).
     See the _set_defaults properties to see what params are allowed."""
     
@@ -142,6 +145,14 @@ class SkidmarkCSS(object):
     self.math_ops = None
     self.current_template_definition = None
     self.include_base_path = ""
+    self.plugins = plugins
+    
+    self.add_plugin(PropertyDarken)
+    self.add_plugin(PropertyLighten)
+    
+    if plugins is not None and type(plugins) is list:
+      for plugin in plugins:
+        SkidmarkCSS.add_plugin(plugin)      
     
     if parent is not None:
       if not isinstance(parent, SkidmarkCSS):
@@ -713,6 +724,8 @@ class SkidmarkCSS(object):
     return directive_result
   
   def _nodeprocessor_string(self, data, parent):
+    if (data.startswith('"') or data.startwith("'")) and data.endswith(data[0]):
+      return data[1:-1]
     return data
   
   def _nodeprocessor_param(self, data, parent):
@@ -908,6 +921,15 @@ class SkidmarkCSS(object):
         
     return seq
   
+  def _nodeprocessor_plugin(self, data, parent):
+    plugin_name = data[0]
+    arguments = data[1:]
+    
+    if plugin_name not in SkidmarkCSS.plugins:
+      raise Unimplemented("No suitable plugins found for '%s'" % ( plugin_name, ))
+    
+    args = [ self._process_node(node) for node in arguments ]
+    return SkidmarkCSS.plugins.get(plugin_name).eval(*args)
   
   #
   # Directives
@@ -935,6 +957,15 @@ class SkidmarkCSS(object):
             parent.add_child(branch)
         return tree
     return []
+  
+  @classmethod
+  def add_plugin(cls, plugin_class):
+    plugin = plugin_class()
+    
+    if not isinstance(plugin, SkidmarkCSSPlugin):
+      raise Unimplemented("Plugins must be a SkidmarkCSSPlugin object")
+    
+    cls.plugins[plugin.name] = plugin
 
 
 class MathOperations(object):
