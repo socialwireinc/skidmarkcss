@@ -156,7 +156,8 @@ class HTMLColors(object):
     'yellowgreen': '#9ACD32'
   }
 
-  def get_color_name(self, color_value):
+  @classmethod
+  def get_color_name(cls, color_value):
     """Returns the color name matching this value. Returns an empty string
     if no suitable match is found"""
     
@@ -169,7 +170,8 @@ class HTMLColors(object):
     
     return ""
 
-  def get_color_value(self, color_name):
+  @classmethod
+  def get_color_value(cls, color_name):
     """Returns the color value mathing this name. Returns an empty string
     if no suitable match is found"""
     
@@ -181,12 +183,19 @@ class HTMLColors(object):
     
     return ""
 
-  def get_color_shortest(self, color_name_or_value):
+  @classmethod
+  def get_color_shortest(cls, color_name_or_value):
     """Attempts to retrieve by name and value and returns the shortest
     string. Returns the input string if nothing is found"""
     
-    name = self.get_color_name(color_name_or_value)
-    value = self.get_color_value(color_name_or_value)
+    name = cls.get_color_name(color_name_or_value) or color_name_or_value
+    value = cls.get_color_value(color_name_or_value) or color_name_or_value
+    
+    if value:
+      if len(value) == 7:
+        condensed = [ value[v] for v in range(1, 7, 2) if value[v] == value[v + 1] ]
+        if len(condensed) == 3:
+          value = "#" + "".join(condensed)
     
     l_name = len(name)
     l_value = len(value)
@@ -202,7 +211,8 @@ class HTMLColors(object):
     
     return color_name_or_value
 
-  def is_valid_color_value(self, color_value):
+  @classmethod
+  def is_valid_color_value(cls, color_value):
     """Validates the characters, not the format"""
     
     c_value = color_value.strip().lower()
@@ -218,14 +228,15 @@ class HTMLColors(object):
     
     return not invalid
   
-  def get_rgb(self, color):
+  @classmethod
+  def get_rgb(cls, color):
     if not color.startswith("#"):
       # Are we passing a color, if this doens't work, we can't do anything!
-      c_value = self.get_color_value(color)
+      c_value = cls.get_color_value(color)
       if c_value:
         color = c_value
     
-    if self.is_valid_color_value(color):
+    if cls.is_valid_color_value(color):
     
       if len(color) in (4, 7):
         c_value = color[1:]
@@ -238,27 +249,31 @@ class HTMLColors(object):
     
     raise InvalidColorException("%s is not a valid color" % ( color, ))
   
-  def get_color_from_rgb(self, r, g, b):
+  @classmethod
+  def get_color_from_rgb(cls, r, g, b):
     """Return an html color from rgb"""
     
-    return self.get_color_shortest("#" + "".join([ ("0" + hex(i)[2:])[-2:] for i in (r, g, b) ]))
+    value = "#" + "".join([ ("0" + hex(i)[2:])[-2:] for i in (r, g, b) ])
+    return cls.get_color_shortest(value)
 
-  def lighten(self, color, percentage=25):
+  @classmethod
+  def lighten(cls, color, percentage=25):
     """Lightens a HTML color by the percentage specified"""
     
-    r, g, b = self.get_rgb(color)
+    r, g, b = cls.get_rgb(color)
     
     if percentage:
       r, g, b = [ int(i + (percentage * (255 - i + 1) / 100.0)) for i in (r, g, b) ]
     
-    return self.get_color_from_rgb(r, g, b)
+    return cls.get_color_from_rgb(r, g, b)
 
-  def darken(self, color, percentage=25):
+  @classmethod
+  def darken(cls, color, percentage=25):
     """Darkens a HTML colour by the percentage specified"""
     
-    r, g, b = self.get_rgb(color)
+    r, g, b = cls.get_rgb(color)
     
     if percentage:
       r, g, b = [ int(i - (percentage * i / 100.0)) for i in (r, g, b) ]
     
-    return self.get_color_from_rgb(r, g, b)
+    return cls.get_color_from_rgb(r, g, b)

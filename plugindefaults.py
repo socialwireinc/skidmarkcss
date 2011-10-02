@@ -11,8 +11,7 @@ class PropertyDarken(SkidmarkCSSPlugin):
     # We expect 1 to 2 params
     color, percent = (args + (None,))[:2]
     
-    html_colors = HTMLColors()
-    color = html_colors.get_color_shortest(color)
+    color = HTMLColors.get_color_shortest(color)
     
     if percent:
       if percent.endswith("%"):
@@ -24,9 +23,9 @@ class PropertyDarken(SkidmarkCSSPlugin):
         percent = 0
     
     if not percent:
-      return html_colors.darken(color)
+      return HTMLColors.darken(color)
     
-    return html_colors.darken(color, percent)
+    return HTMLColors.darken(color, percent)
 
 class PropertyLighten(SkidmarkCSSPlugin):
   def __init__(self):
@@ -36,8 +35,7 @@ class PropertyLighten(SkidmarkCSSPlugin):
     # We expect 1 to 2 params
     color, percent = (args + (None,))[:2]
     
-    html_colors = HTMLColors()
-    color = html_colors.get_color_shortest(color)
+    color = HTMLColors.get_color_shortest(color)
     
     if percent:
       if percent.endswith("%"):
@@ -49,6 +47,6 @@ class PropertyLighten(SkidmarkCSSPlugin):
         percent = 0
     
     if not percent:
-      return html_colors.lighten(color)
+      return HTMLColors.lighten(color)
     
-    return html_colors.lighten(color, percent)
+    return HTMLColors.lighten(color, percent)
