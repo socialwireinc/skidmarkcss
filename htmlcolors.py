@@ -194,10 +194,10 @@ class HTMLColors(object):
     if l_name == l_value:
       return color_name_or_value
     
-    if name and l_name < l_value:
+    if (l_name and not l_value) or (name and l_value and l_name < l_value):
       return name
     
-    if value and l_value < l_name:
+    if (l_value and not l_name) or (value and l_name and l_value < l_name):
       return value
     
     return color_name_or_value
@@ -241,20 +241,24 @@ class HTMLColors(object):
   def get_color_from_rgb(self, r, g, b):
     """Return an html color from rgb"""
     
-    return "#" + "".join([ ("0" + hex(i)[2:])[-2:] for i in (r, g, b) ])
+    return self.get_color_shortest("#" + "".join([ ("0" + hex(i)[2:])[-2:] for i in (r, g, b) ]))
 
   def lighten(self, color, percentage=25):
     """Lightens a HTML color by the percentage specified"""
     
     r, g, b = self.get_rgb(color)
-    ri, gi, bi = [ int(i + (percentage * (255 - i) / 100.0)) for i in (r, g, b) ]
     
-    return self.get_color_from_rgb(ri, gi, bi)
+    if percentage:
+      r, g, b = [ int(i + (percentage * (255 - i + 1) / 100.0)) for i in (r, g, b) ]
+    
+    return self.get_color_from_rgb(r, g, b)
 
   def darken(self, color, percentage=25):
     """Darkens a HTML colour by the percentage specified"""
     
     r, g, b = self.get_rgb(color)
-    ri, gi, bi = [ int(i - (percentage * i / 100.0)) for i in (r, g, b) ]
     
-    return self.get_color_from_rgb(ri, gi, bi)
+    if percentage:
+      r, g, b = [ int(i - (percentage * i / 100.0)) for i in (r, g, b) ]
+    
+    return self.get_color_from_rgb(r, g, b)

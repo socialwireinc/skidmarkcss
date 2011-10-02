@@ -12,9 +12,10 @@ import time
 import StringIO
 
 import skidmarklanguage
+import skidmarkoutputs
 from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
 from pluginmanager import SkidmarkCSSPlugin
-from plugindefault import PropertyDarken, PropertyLighten
+from plugindefaults import PropertyDarken, PropertyLighten
 
 
 #
@@ -70,54 +71,6 @@ class InvalidArgumentException(Exception):
 
 TEMPLATES = {}
 VARIABLE_STACK = []
-
-CSS_OUTPUT_COMPRESSED = 0
-CSS_OUTPUT_COMPACT = 1
-CSS_OUTPUT_CLEAN = 2
-CSS_OUTPUT_SINGLELINE = 3
-SPACING_CLEAN = 2
-
-OUTPUT_TEMPLATE_DECLARATION = {
-  CSS_OUTPUT_SINGLELINE: "%s{%s}",
-  CSS_OUTPUT_COMPRESSED: "%s{%s}",
-  CSS_OUTPUT_COMPACT: "%s { %s; }",
-  CSS_OUTPUT_CLEAN: "%%s {\n%s%%s;\n}\n" % ( " " * SPACING_CLEAN, )
-}
-
-OUTPUT_TEMPLATE_SELECTOR_SEPARATORS = {
-  CSS_OUTPUT_SINGLELINE: ",",
-  CSS_OUTPUT_COMPRESSED: ",",
-  CSS_OUTPUT_COMPACT: ", ",
-  CSS_OUTPUT_CLEAN: ",\n"
-}
-
-OUTPUT_TEMPLATE_PROPERTY_SEPARATORS = {
-  CSS_OUTPUT_SINGLELINE: ";",
-  CSS_OUTPUT_COMPRESSED: ";",
-  CSS_OUTPUT_COMPACT: "; ",
-  CSS_OUTPUT_CLEAN: ";\n%s" % ( " " * SPACING_CLEAN, )
-}
-
-OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR = {
-  CSS_OUTPUT_SINGLELINE: ":",
-  CSS_OUTPUT_COMPRESSED: ":",
-  CSS_OUTPUT_COMPACT: ": ",
-  CSS_OUTPUT_CLEAN: ": "
-}
-
-OUTPUT_TEMPLATE_COMBINATOR = {
-  CSS_OUTPUT_SINGLELINE: "%s",
-  CSS_OUTPUT_COMPRESSED: "%s",
-  CSS_OUTPUT_COMPACT: " %s",
-  CSS_OUTPUT_CLEAN: " %s"
-}
-
-OUTPUT_TEMPLATE_DECLARATION_SEPARATOR = {
-  CSS_OUTPUT_SINGLELINE: "",
-  CSS_OUTPUT_COMPRESSED: "\n",
-  CSS_OUTPUT_COMPACT: "\n",
-  CSS_OUTPUT_CLEAN: "\n"
-}
 
 
 #
@@ -177,7 +130,7 @@ class SkidmarkCSS(object):
   def _set_defaults(self):
     self.verbose = False
     self.printcss = False
-    self.output_format = CSS_OUTPUT_COMPRESSED
+    self.output_format = skidmarkoutputs.CSS_OUTPUT_COMPRESSED
     self.show_hierarchy = False
     self.simplify_output = True
     self.timer = False
@@ -341,7 +294,7 @@ class SkidmarkCSS(object):
       self.verbose = verbose_mode
     
     css = self._generate_css(data)
-    css_str = OUTPUT_TEMPLATE_DECLARATION_SEPARATOR[self.output_format].join(css)
+    css_str = skidmarkoutputs.OUTPUT_TEMPLATE_DECLARATION_SEPARATOR[self.output_format].join(css)
     
     if self.verbose and not self.printcss:
       self._log("Generated CSS")
@@ -384,9 +337,9 @@ class SkidmarkCSS(object):
         if self.simplify_output:
           blk.simplify_shorthandables()
         
-        css.append(OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
-          OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
-          OUTPUT_TEMPLATE_PROPERTY_SEPARATORS[self.output_format].join(blk.properties)
+        css.append(skidmarkoutputs.OUTPUT_TEMPLATE_DECLARATION[self.output_format] % (
+          skidmarkoutputs.OUTPUT_TEMPLATE_SELECTOR_SEPARATORS[self.output_format].join(all_selectors),
+          skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_SEPARATORS[self.output_format].join(blk.properties)
         ))
     
     return css
@@ -628,7 +581,7 @@ class SkidmarkCSS(object):
         else:
           selector_parts.append(selector_item)
       elif selector_type == "combinator":
-        combinator_symbol = OUTPUT_TEMPLATE_COMBINATOR[self.output_format] % ( "".join(selector_item).strip(), )
+        combinator_symbol = skidmarkoutputs.OUTPUT_TEMPLATE_COMBINATOR[self.output_format] % ( "".join(selector_item).strip(), )
         selector_parts[-1] = "%s%s" % ( selector_parts[-1], combinator_symbol )
       elif  selector_type == "selector":
         selector_parts.extend(self._nodepprocessor_helper_selector(selector_item))
@@ -659,7 +612,7 @@ class SkidmarkCSS(object):
     self._log("V Creating a new variable set in the stack")
     VARIABLE_STACK.append({})
     
-    oDeclarationBlock = n_DeclarationBlock(parent, self.simplify_output)
+    oDeclarationBlock = n_DeclarationBlock(parent, self.simplify_output, self.output_format)
     
     for node_data in data:
       property = self._process_node(node_data, oDeclarationBlock)
@@ -697,7 +650,8 @@ class SkidmarkCSS(object):
         
     if not name or not value:
       raise UnrecognizedParsedTree("Failure during property parsing: %s" % ( str(data), ))
-    return "%s%s%s" % ( name, OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format], value )
+    
+    return "%s%s%s" % ( name, skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format], value )
   
   def _nodeprocessor_property_unterminated(self, data, parent):
     """Node Processor: property_unterminated"""
@@ -929,7 +883,9 @@ class SkidmarkCSS(object):
       raise Unimplemented("No suitable plugins found for '%s'" % ( plugin_name, ))
     
     args = [ self._process_node(node) for node in arguments ]
+    
     return SkidmarkCSS.plugins.get(plugin_name).eval(*args)
+  
   
   #
   # Directives
@@ -1064,7 +1020,7 @@ class MathOperations(object):
 
 def simple_process_file(infile):
   try:
-    sm = SkidmarkCSS(infile, verbose=False, output_format=CSS_OUTPUT_CLEAN)
+    sm = SkidmarkCSS(infile, verbose=False, output_format=skidmarkoutputs.CSS_OUTPUT_CLEAN)
     print "\n".join(sm._generate_css())
   except:
     err = """body:before { content: \""""
@@ -1163,10 +1119,10 @@ def get_arguments():
   arg_parser.add_argument("-p", "--printcss", dest="printcss", help="Output the final CSS to stdout", action="store_true")
   arg_parser.add_argument("-t", "--timer", dest="timer", help="Display timer information", action="store_true")
   arg_parser.add_argument("--hierarchy", dest="hierarchy", help="Display the object hierarchy representing the CSS", action="store_true")
-  arg_parser.add_argument("--clean", dest="format", help="Outputs the CSS in 'clean' format", action="store_const", const=CSS_OUTPUT_CLEAN)
-  arg_parser.add_argument("--compact", dest="format", help="Outputs the CSS in 'compact' format (default)", action="store_const", const=CSS_OUTPUT_COMPACT)
-  arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=CSS_OUTPUT_COMPRESSED)
-  arg_parser.add_argument("--singleline", dest="format", help="Outputs the CSS in 'single line' format (ultra compressed)", action="store_const", const=CSS_OUTPUT_SINGLELINE)
+  arg_parser.add_argument("--clean", dest="format", help="Outputs the CSS in 'clean' format", action="store_const", const=skidmarkoutputs.CSS_OUTPUT_CLEAN)
+  arg_parser.add_argument("--compact", dest="format", help="Outputs the CSS in 'compact' format (default)", action="store_const", const=skidmarkoutputs.CSS_OUTPUT_COMPACT)
+  arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=skidmarkoutputs.CSS_OUTPUT_COMPRESSED)
+  arg_parser.add_argument("--singleline", dest="format", help="Outputs the CSS in 'single line' format (ultra compressed)", action="store_const", const=skidmarkoutputs.CSS_OUTPUT_SINGLELINE)
   arg_parser.add_argument("-ns", "--nosimplify", dest="simplify_output", help="Do not simplify the output by using shorthand notions where possible", action="store_false")
   
   return arg_parser.parse_args()
@@ -1177,10 +1133,10 @@ if __name__ == '__main__':
   infile = args.infile and args.infile[0] or None
   outfile = args.outfile and args.outfile[0] or None
   
-  if args.format in (CSS_OUTPUT_COMPRESSED, CSS_OUTPUT_COMPACT, CSS_OUTPUT_CLEAN, CSS_OUTPUT_SINGLELINE):
+  if args.format in (skidmarkoutputs.CSS_OUTPUT_COMPRESSED, skidmarkoutputs.CSS_OUTPUT_COMPACT, skidmarkoutputs.CSS_OUTPUT_CLEAN, skidmarkoutputs.CSS_OUTPUT_SINGLELINE):
     output_format = args.format
   else:
-    output_format = CSS_OUTPUT_COMPACT
+    output_format = skidmarkoutputs.CSS_OUTPUT_COMPACT
   
   if not args.printcss and not outfile:
     args.printcss = True

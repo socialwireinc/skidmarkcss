@@ -109,7 +109,7 @@ def param_list():
   return ZERO_OR_ONE, arg(), ZERO_OR_MORE, (",", arg())
   
 def arg():
-  return [ variable, string, math_operation, param ]
+  return [ plugin, variable, string, math_operation, param ]
   
 def function_declaration():
   return ident(), "(", ZERO_OR_ONE, param_list_declaration(), ")"

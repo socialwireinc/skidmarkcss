@@ -3,6 +3,8 @@
 """Classes and constants used to properly handle EXPANDABLES (one property that becomes many, as with 'opacity')
 and SHORTHANDS (multiple properties that can be combined into a single one)"""
 
+import skidmarkoutputs
+
 #
 # The Objects
 #
@@ -13,9 +15,14 @@ class ShorthandHandler(object):
   be able to do so are present"""
   
   PROPERTIES_AVAILABLE_FOR_SHORTHAND = None
+  output_format = skidmarkoutputs.CSS_OUTPUT_COMPRESSED
   
   def __init__(self):
     pass
+  
+  @classmethod
+  def set_output_format(cls, output_format):
+    cls.output_format = output_format
   
   @classmethod
   def get_properties_available_for_shorthand(cls):
@@ -102,14 +109,16 @@ class ShorthandHandler(object):
     """This is the generic handler for the elements that require 4 params
     that are defined as 'top right bottom left', such as padding and margin."""
     
+    sep = skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[cls.output_format]
+    
     if len(set(block_values)) == 1:
-      shorthand_property = shorthand + ": " + block_values[0]
+      shorthand_property = "%s%s%s" % ( shorthand, sep, block_values[0] )
     elif block_values[0] == block_values[2] and block_values[1] == block_values[3]:
-      shorthand_property = shorthand + ": " + " ".join(block_values[:2])
+      shorthand_property = "%s%s%s" % ( shorthand, sep, " ".join(block_values[:2]) )
     elif block_values[1] == block_values[3]:
-      shorthand_property = shorthand + ": " + " ".join(block_values[:3])
+      shorthand_property = "%s%s%s" % ( shorthand, sep, " ".join(block_values[:3]) )
     else:
-      shorthand_property = shorthand + ": " + " ".join(block_values)
+      shorthand_property = "%s%s%s" % ( shorthand, sep, " ".join(block_values) )
     
     return shorthand_property
   
@@ -118,21 +127,25 @@ class ShorthandHandler(object):
     """This is the generic handler for shorthands that are composed entirely of
     the property data defined in PROPERTY_SHORTHANDS, in the exact order."""
     
-    return shorthand + ": " + " ".join(block_values)
+    sep = skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[cls.output_format]
+    
+    return "%s%s%s" % ( shorthand, sep, " ".join(block_values) )
   
   @classmethod
   def process_font(cls, shorthand, block_values):
     """Custom handler for the 'font' shorthand"""
     
+    sep = skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[cls.output_format]
+    
     shorthand_property = None
     if len(block_values) == 6:
-      shorthand_property = "%s: %s %s %s %s/%s %s" % tuple([shorthand] + block_values)
+      shorthand_property = "%s%s%s %s %s %s/%s %s" % tuple([shorthand, sep] + block_values)
     elif len(block_values) == 5:
-      shorthand_property = "%s: %s %s %s/%s %s" % tuple([shorthand] + block_values)
+      shorthand_property = "%s%s%s %s %s/%s %s" % tuple([shorthand, sep] + block_values)
     elif len(block_values) == 3:
-      shorthand_property = "%s: %s/%s %s" % tuple([shorthand] + block_values)
+      shorthand_property = "%s%s%s/%s %s" % tuple([shorthand, sep] + block_values)
     elif len(block_values) == 2:
-      shorthand_property = "%s: %s %s" % tuple([shorthand] + block_values)
+      shorthand_property = "%s%s%s %s" % tuple([shorthand, sep] + block_values)
     
     return shorthand_property
   

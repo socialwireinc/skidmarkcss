@@ -4,6 +4,7 @@
 
 import copy
 
+import skidmarkoutputs
 from propertyexpandables import PROPERTY_EXPANDABLES, PROPERTY_SHORTHANDS, ShorthandHandler, ExpandableHandler
 
 class SkidmarkHierarchy(object):
@@ -145,11 +146,14 @@ class n_Selector(SkidmarkHierarchy):
 class n_DeclarationBlock(SkidmarkHierarchy):
   """Defines a CSS declaration block"""
   
-  def __init__(self, parent, simplify_output):
+  def __init__(self, parent, simplify_output, output_format):
     SkidmarkHierarchy.__init__(self, parent)
     self.properties = []
     self.simplify_output = simplify_output
+    self.output_format = output_format
     self.requires_shorthand_check = False
+    
+    ShorthandHandler.set_output_format(output_format)
   
   def __nonzero__(self):
     """The object is considered "valid" if it has properties"""
@@ -179,7 +183,8 @@ class n_DeclarationBlock(SkidmarkHierarchy):
           if p_value is None:
             self.remove_property(p_name)
           else:
-            new_property = "%s: %s" % ( p_name, p_value )
+            sep = skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format]
+            new_property = "%s%s%s" % ( p_name, sep, p_value )
             self.add_property(new_property)
         
         return
