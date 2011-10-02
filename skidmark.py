@@ -542,7 +542,7 @@ class SkidmarkCSS(object):
     """Node Processor: selector"""
     
     selector_parts = self._nodepprocessor_helper_selector(data)
-    return n_Selector(parent, " ".join(selector_parts))
+    return n_Selector(parent, "".join(selector_parts))
     
   def _nodepprocessor_helper_selector(self, data):
     """Node Processor Helper Function: selector"""
