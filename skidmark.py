@@ -886,6 +886,23 @@ class SkidmarkCSS(object):
     
     return SkidmarkCSS.plugins.get(plugin_name).eval(*args)
   
+  def _nodeprocessor_propertyvalue_pluginextended(self, data, parent):
+    """The concatenated rendered data is the property string"""
+    
+    value = []
+    for item in data:
+      if isinstance(item, basestring):
+        value.append(item.strip())
+      else:
+        value.append(self._process_node(item))
+    
+    return " ".join(value)
+  
+  def _nodeprocessor_pre_plugin_text(self, data, parent):
+    """The data should be the string we're looking for"""
+    
+    return data
+  
   
   #
   # Directives

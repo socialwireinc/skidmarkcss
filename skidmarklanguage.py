@@ -166,7 +166,13 @@ def propertyname():
   return re_name
 
 def propertyvalue():
-  return [ math_operation, plugin, re_propertyvalue ]
+  return [ math_operation, plugin, re_propertyvalue, propertyvalue_pluginextended ]
+
+def pre_plugin_text():
+  return rec("[^~]*")
+  
+def propertyvalue_pluginextended():
+  return pre_plugin_text(), plugin, ZERO_OR_MORE, propertyvalue_pluginextended, propertyvalue()
 
 def property():
   return property_unterminated(), ";"
