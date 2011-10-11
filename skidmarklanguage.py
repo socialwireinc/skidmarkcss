@@ -30,7 +30,7 @@ t_import_rule = "\@import\s+url\s*[^;]*;"
 t_charset_rule = "\@charset\s+[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
 t_comment = r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/"
-t_param = "[a-zA-Z0-9#.]+|" + t_string + "|" + t_variable
+t_param = "[a-zA-Z0-9#.]+%?|" + t_string + "|" + t_variable
 
 # Compiled RegExp
 rec = re.compile

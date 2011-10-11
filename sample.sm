@@ -12,7 +12,7 @@ $mainColor = #f0f0f0;
 @@template box($width, $height, $bgcolor) {
   width: $width;
   height: $height;
-  border: 1px solid ~darken($bgcolor, 25);
+  border: 1px solid ~darken($bgcolor, 50%);
   background-color: $bgcolor;
   @@use boxextras();
 }
