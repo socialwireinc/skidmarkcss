@@ -204,6 +204,11 @@ class n_DeclarationBlock(SkidmarkHierarchy):
       
       if callable(property_name):
         new_property = property_name(prop_value)
+        
+        # We need to format this property according to the user's desired output format
+        p_name, p_value = n_DeclarationBlock.get_property_parts(new_property)
+        sep = skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format]
+        new_property = "%s%s%s" % ( p_name, sep, p_value )
       else:
         new_property = property.replace(prop_name, property_name)
       

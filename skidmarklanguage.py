@@ -30,7 +30,7 @@ t_import_rule = "\@import\s+url\s*[^;]*;"
 t_charset_rule = "\@charset\s+[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
 t_comment = r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/"
-t_param = "[a-zA-Z0-9#.]+|" + t_string + "|" + t_variable
+t_param = "[a-zA-Z0-9#.]+%?|" + t_string + "|" + t_variable
 
 # Compiled RegExp
 rec = re.compile
@@ -166,7 +166,13 @@ def propertyname():
   return re_name
 
 def propertyvalue():
-  return [ math_operation, plugin, re_propertyvalue ]
+  return [ math_operation, plugin, propertyvalue_pluginextended, re_propertyvalue ]
+
+def pre_plugin_text():
+  return rec("[^~;]*")
+  
+def propertyvalue_pluginextended():
+  return pre_plugin_text(), plugin, ZERO_OR_MORE, propertyvalue_pluginextended, propertyvalue()
 
 def property():
   return property_unterminated(), ";"

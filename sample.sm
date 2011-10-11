@@ -1,15 +1,43 @@
-@@template box($color) {
-  width: 500px;
-  height: 350px;
-  background-color: $color;
-  border {{
-    width: 1px;
-    style: solid;
-    color: ~lighten($color, 20);
+$size_base = 0.8em;
+$size_title = $size_base * 1.3;
+$padding = $size_base + 1.3em / 0.4;
+$mainColor = #f0f0f0;
+
+@@template boxextras() {
+  &.info { background-color: yellow; }
+  &.warning { background-color: red; }
+  &.transparent { opacity: 0.5; }
+}
+
+@@template box($width, $height, $bgcolor) {
+  width: $width;
+  height: $height;
+  border: 1px solid ~darken($bgcolor, 50%);
+  background-color: $bgcolor;
+  @@use boxextras();
+}
+
+a { size: $size_base; }
+h1 {
+  font {{
+    family: arial, helvetica, sans-serif;
+    size: $size_title;
   }}
 }
 
+
 div {
-  @@use box(red);
-  /* NEED TO MAKE THIS WORK: ~darken(color, 20%);  */
+  color: $mainColor;
+  border: 1x solid $mainColor;
+  padding: $padding;
+  
+  input[type=button] { color: green; }
+  
+  span+em {
+    font-weight:bold;
+    
+    &>sup { woah: wow; }
+  }
+  
+  @@use box(400px, "500px", tomato);
 }

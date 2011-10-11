@@ -105,7 +105,7 @@ class SkidmarkCSS(object):
     
     if plugins is not None and type(plugins) is list:
       for plugin in plugins:
-        SkidmarkCSS.add_plugin(plugin)      
+        SkidmarkCSS.add_plugin(plugin)
     
     if parent is not None:
       if not isinstance(parent, SkidmarkCSS):
@@ -128,14 +128,22 @@ class SkidmarkCSS(object):
     return
   
   def _set_defaults(self):
+    """Set the default parameters. Any attributes defined here will be
+    settable via the config_dict passed to the __init__ method."""
+    
     self.verbose = False
     self.printcss = False
     self.output_format = skidmarkoutputs.CSS_OUTPUT_COMPRESSED
     self.show_hierarchy = False
     self.simplify_output = True
     self.timer = False
+    
+    return
   
   def _init_object(self, config_dict):
+    """Initialize the object, setting the defaults and validating the config
+    parameters"""
+    
     self._set_defaults()
     
     # Raise an exception if an invalid config param is passed
@@ -147,8 +155,13 @@ class SkidmarkCSS(object):
       ))
     
     self.__dict__.update(config_dict)
+    
+    return
   
   def get_config_dict(self, **kw):
+    """Returns a config dictionary, using the current config values and
+    not necesarily those passed to the __init__ method"""
+    
     config = dict(
       verbose=self.verbose,
       printcss=self.printcss,
@@ -188,11 +201,13 @@ class SkidmarkCSS(object):
           print "%s%s" % ( single_leading_spacer * leading, s )
       else:
         print s
+    
     return
     
   def _update_log_indent(self, change):
     if self.verbose and type(change) is int:
       self.log_indent_level += change
+    
     return self.log_indent_level
   
   def _parse_file(self):
@@ -274,7 +289,9 @@ class SkidmarkCSS(object):
     
     return data
   
-  def _process_output(self):    
+  def _process_output(self):
+    """Using the processed tree, generate the output data"""
+    
     data = self.get_processed_tree()
     
     if self.show_hierarchy:
@@ -345,6 +362,9 @@ class SkidmarkCSS(object):
     return css
   
   def _generate_css_get_blk_selectors(self, node):
+    """Helper function for _generate_css().
+    Returns the block selectotors (list)"""
+    
     declaration_blocks = []
     if isinstance(node, SkidmarkHierarchy):
       declaration_blocks = node.find_child_declaration_blocks(declaration_blocks)
@@ -466,7 +486,8 @@ class SkidmarkCSS(object):
   
   def _update_property(self, property):
     """Verifies the property to see if the value is a reference to a variable.
-    Returns an updated property (or an unmodified property if it was not required."""
+    Returns an updated property (or an unmodified property if it was not
+    required."""
     
     prop_name, prop_value = n_DeclarationBlock.get_property_parts(property)
     
@@ -678,11 +699,14 @@ class SkidmarkCSS(object):
     return directive_result
   
   def _nodeprocessor_string(self, data, parent):
+    """Node Processor: string"""
+    
     if (data.startswith('"') or data.startwith("'")) and data.endswith(data[0]):
       return data[1:-1]
     return data
   
   def _nodeprocessor_param(self, data, parent):
+    """Node Processor: param"""
     if isinstance(data, basestring):
       return data
     
@@ -745,15 +769,16 @@ class SkidmarkCSS(object):
       params = []
       
     template = TEMPLATES.get(template_name)
+    
+    # Verify that this template has been defined
+    if not template:
+      raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
+    
     params = [ pvalue.startswith("$") and self._get_variable_value(pvalue) or pvalue for pvalue in params ]
     param_substitutions = zip(template.params, params)
     
     VARIABLE_STACK[-1].update(dict([ (k[1:], v) for k, v in param_substitutions ]))
     
-    # Verify that this template has been defined
-    if not template:
-      raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
-      
     # Verify the parameters
     if not template.params_are_valid(params):
       # It would be ideal if we could identify the line number, but I don't think it's possible with a properly parsed pypeg file
@@ -783,6 +808,8 @@ class SkidmarkCSS(object):
     return ""
   
   def _nodeprocessor_expansion(self, data, parent):
+    """Node Processor: expansion"""
+    
     root_name = data[0]
     elements = data[1:]
     
@@ -876,6 +903,8 @@ class SkidmarkCSS(object):
     return seq
   
   def _nodeprocessor_plugin(self, data, parent):
+    """Node Processor: plugin"""
+    
     plugin_name = data[0]
     arguments = data[1:]
     
@@ -885,6 +914,23 @@ class SkidmarkCSS(object):
     args = [ self._process_node(node) for node in arguments ]
     
     return SkidmarkCSS.plugins.get(plugin_name).eval(*args)
+  
+  def _nodeprocessor_propertyvalue_pluginextended(self, data, parent):
+    """The concatenated rendered data is the property string"""
+    
+    value = []
+    for item in data:
+      if isinstance(item, basestring):
+        value.append(item.strip())
+      else:
+        value.append(self._process_node(item))
+    
+    return " ".join(value)
+  
+  def _nodeprocessor_pre_plugin_text(self, data, parent):
+    """The data should be the string we're looking for"""
+    
+    return data
   
   
   #
@@ -916,6 +962,9 @@ class SkidmarkCSS(object):
   
   @classmethod
   def add_plugin(cls, plugin_class):
+    """Use this method to add your own plugins. Give it your plugin class,
+    not an instantiated object"""
+    
     plugin = plugin_class()
     
     if not isinstance(plugin, SkidmarkCSSPlugin):
