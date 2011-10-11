@@ -745,15 +745,16 @@ class SkidmarkCSS(object):
       params = []
       
     template = TEMPLATES.get(template_name)
+    
+    # Verify that this template has been defined
+    if not template:
+      raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
+    
     params = [ pvalue.startswith("$") and self._get_variable_value(pvalue) or pvalue for pvalue in params ]
     param_substitutions = zip(template.params, params)
     
     VARIABLE_STACK[-1].update(dict([ (k[1:], v) for k, v in param_substitutions ]))
     
-    # Verify that this template has been defined
-    if not template:
-      raise UndefinedTemplate("Template '%s' has not been defined" % ( template_name, ))
-      
     # Verify the parameters
     if not template.params_are_valid(params):
       # It would be ideal if we could identify the line number, but I don't think it's possible with a properly parsed pypeg file

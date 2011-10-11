@@ -166,10 +166,10 @@ def propertyname():
   return re_name
 
 def propertyvalue():
-  return [ math_operation, plugin, re_propertyvalue, propertyvalue_pluginextended ]
+  return [ math_operation, plugin, propertyvalue_pluginextended, re_propertyvalue ]
 
 def pre_plugin_text():
-  return rec("[^~]*")
+  return rec("[^~;]*")
   
 def propertyvalue_pluginextended():
   return pre_plugin_text(), plugin, ZERO_OR_MORE, propertyvalue_pluginextended, propertyvalue()
