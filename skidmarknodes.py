@@ -114,9 +114,10 @@ class n_Declaration(SkidmarkHierarchy):
   
   def iter_selectors(self):
     """Iterate through the object's selector objects"""
-    
+
     for selector in self.selectors:
       yield selector
+    
     return
   
   def add_selectors(self, selectors):
@@ -131,7 +132,7 @@ class n_Declaration(SkidmarkHierarchy):
     self.declarationblock = declarationblock
     return declarationblock
 
-
+    
 class n_Selector(SkidmarkHierarchy):
   """Defines a CSS selector"""
   
@@ -299,6 +300,26 @@ class n_DeclarationBlock(SkidmarkHierarchy):
           self.add_property(shorthand_property, bypass_expand=True, position=positions[0])
           self.remove_property(blk)
           break
+    
+    return
+  
+  def _transfer_data(self, declaration_block_dest):
+    """Transfer all properties to another declaration block"""
+    
+    if not isinstance(declaration_block_dest, n_DeclarationBlock):
+      raise Exception("A declaration block can only transfer its properties to another declaration block")
+    
+    for property in self.properties:
+      declaration_block_dest.add_property(property)
+    
+    self._invalidate()
+    
+    return
+  
+  def _invalidate(self):
+    """Removes all properties, rendering this declaration block invalid"""
+    
+    self.properties = []
     
     return
   

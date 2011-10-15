@@ -17,6 +17,7 @@ from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_Declar
 from pluginmanager import SkidmarkCSSPlugin
 from plugindefaults import PropertyDarken, PropertyLighten
 
+re_combinator = re.compile(r"(?:[^ ])([+>]{1}\s+)")
 
 #
 # Exception Classes
@@ -118,6 +119,10 @@ class SkidmarkCSS(object):
     self.ast = self._parse_file()
     
     self.processed_tree = self._process()
+    
+    if self.unify_selectors:
+      self._unite_common_declarations()
+    
     self._process_output()
     
     if self.timer and self.log_indent_level == 0:
@@ -136,6 +141,7 @@ class SkidmarkCSS(object):
     self.output_format = skidmarkoutputs.CSS_OUTPUT_COMPRESSED
     self.show_hierarchy = False
     self.simplify_output = True
+    self.unify_selectors = False
     self.timer = False
     
     return
@@ -168,6 +174,7 @@ class SkidmarkCSS(object):
       output_format=self.output_format,
       show_hierarchy=self.show_hierarchy,
       simplify_output=self.simplify_output,
+      unify_selectors=self.unify_selectors,
       timer=self.timer
     )
     
@@ -522,8 +529,35 @@ class SkidmarkCSS(object):
     s = number.split(str(value))
     if len(s) == 2:
       return value, s[1].strip()
+    
     return value, ""
+  
+  def _unite_common_declarations(self):
+    selector_sets = {}
+    tree = self.get_processed_tree()
 
+    for node in tree:
+      if not isinstance(node, n_TextNode):
+        if type(node) is list:
+          blocks = []
+          for _node in node:
+            blocks.extend(self._generate_css_get_blk_selectors(_node))
+        else:
+          blocks = self._generate_css_get_blk_selectors(node)
+        
+        for all_selectors, blk in blocks:
+          selectors = " ".join(all_selectors)
+          s_set = selector_sets.setdefault(selectors, [])
+          s_set.append(blk)
+    
+    for selectors, blocks in selector_sets.iteritems():
+      if len(blocks) > 1:
+        master_block = blocks[0]
+        for blk in blocks[1:]:
+          blk._transfer_data(master_block);
+    
+    return
+  
   
   #
   # Node Processors: What runs through the AST
@@ -563,7 +597,14 @@ class SkidmarkCSS(object):
     """Node Processor: selector"""
     
     selector_parts = self._nodepprocessor_helper_selector(data)
-    return n_Selector(parent, "".join(selector_parts))
+    combined_selectors = " ".join(selector_parts)
+    
+    if self.output_format in (skidmarkoutputs.CSS_OUTPUT_COMPRESSED, skidmarkoutputs.CSS_OUTPUT_SINGLELINE):
+      # Fix for the combinators using these output formats
+      for search in re_combinator.findall(combined_selectors):
+        combined_selectors = combined_selectors.replace(search, search.rstrip())
+    
+    return n_Selector(parent, combined_selectors)
     
   def _nodepprocessor_helper_selector(self, data):
     """Node Processor Helper Function: selector"""
@@ -1173,6 +1214,7 @@ def get_arguments():
   arg_parser.add_argument("--compressed", dest="format", help="Outputs the CSS in 'compressed' format", action="store_const", const=skidmarkoutputs.CSS_OUTPUT_COMPRESSED)
   arg_parser.add_argument("--singleline", dest="format", help="Outputs the CSS in 'single line' format (ultra compressed)", action="store_const", const=skidmarkoutputs.CSS_OUTPUT_SINGLELINE)
   arg_parser.add_argument("-ns", "--nosimplify", dest="simplify_output", help="Do not simplify the output by using shorthand notions where possible", action="store_false")
+  arg_parser.add_argument("-us", "--unifyselectors", dest="unify_selectors", help="Combine repeating selectors to reduce output size", action="store_true")
   
   return arg_parser.parse_args()
 
@@ -1199,7 +1241,8 @@ if __name__ == '__main__':
     printcss=args.printcss,
     output_format=output_format,
     show_hierarchy=args.hierarchy,
-    simplify_output=args.simplify_output
+    simplify_output=args.simplify_output,
+    unify_selectors=args.unify_selectors
   )
   
   execute_sm(config, infile=infile, outfile=outfile)
