@@ -201,7 +201,7 @@ class n_DeclarationBlock(SkidmarkHierarchy):
       
       if property_name in property_names:
         property_position = property_names.index(property_name)
-        self.properties.pop(property_position)
+        #self.properties.pop(property_position)
       
       if callable(property_name):
         new_property = property_name(prop_value)
