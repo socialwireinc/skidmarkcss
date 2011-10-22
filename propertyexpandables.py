@@ -340,6 +340,7 @@ PROPERTY_SHORTHANDS = {
       "font-size", "font-family" ]
   ],
   
+  """
   "background": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
       "background-color", "background-image", "background-repeat", "background-attachment", "background-position" ],
@@ -353,6 +354,7 @@ PROPERTY_SHORTHANDS = {
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
       "background-color" ]
   ],
+  """
   
   "list-style": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
