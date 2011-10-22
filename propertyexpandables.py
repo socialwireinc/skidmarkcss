@@ -339,23 +339,7 @@ PROPERTY_SHORTHANDS = {
     [ PROPERTY_SHORTHAND_TYPE_CUSTOM,
       "font-size", "font-family" ]
   ],
-  
-  """
-  "background": [
-    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "background-color", "background-image", "background-repeat", "background-attachment", "background-position" ],
     
-    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "background-color", "background-image", "background-repeat", "background-position" ],
-      
-    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "background-image", "background-position" ],
-    
-    [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
-      "background-color" ]
-  ],
-  """
-  
   "list-style": [
     [ PROPERTY_SHORTHAND_TYPE_PASSTHRU,
       "list-style-type", "list-style-position", "list-style-image" ],
