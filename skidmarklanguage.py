@@ -26,6 +26,7 @@ t_ident = "[-]?" + p(t_nmstart) + p(t_nmchar) + "*"
 t_class = "\\." + t_ident
 t_variable = "\$[_A-Za-z0-9]+"
 t_constant = "[^ \n\r();,*/+-]+"
+t_mathconstant = "\d[^ \n\r();,*/+-]*"
 t_import_rule = "\@import\s+url\s*[^;]*;"
 t_charset_rule = "\@charset\s+[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
@@ -39,6 +40,7 @@ re_class = rec(t_class)
 re_combinator = rec("[+>]")
 re_comment = rec(t_comment)
 re_constant = rec(t_constant)
+re_mathconstant = rec(t_mathconstant)
 re_element_name = rec(p(t_ident) + "|\\*")
 re_hash = rec(t_hash)
 re_ident = rec(t_ident)
@@ -69,11 +71,14 @@ def variable():
 def constant():
   return re_constant
 
+def mathconstant():
+  return re_mathconstant
+
 def math_operation():
   return [ math_var(), math_group ], math_op(), [ math_var(), math_group ], ZERO_OR_MORE, (math_op(), [ math_var(), math_group ])
 
 def math_var():
-  return [ constant, variable ]
+  return [ mathconstant, variable ]
 
 def math_group():
   return "(", math_operation(), ")"

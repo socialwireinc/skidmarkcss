@@ -919,6 +919,11 @@ class SkidmarkCSS(object):
       raise Unimplemented("expression '%s' in unimplemented" % ( str(data), ))
     
     return constant
+
+  def _nodeprocessor_mathconstant(self, data, parent):
+    """A math constant -- not much to process here"""
+    
+    return self._nodeprocessor_constant(data, parent)
   
   def _nodeprocessor_math_operation(self, data, parent):
     """A math expression parser -- does its best!"""
