@@ -199,10 +199,6 @@ class n_DeclarationBlock(SkidmarkHierarchy):
       if not self.requires_shorthand_check and property_name in props_available_for_shorthand:
         self.requires_shorthand_check = True
       
-      if property_name in property_names:
-        property_position = property_names.index(property_name)
-        #self.properties.pop(property_position)
-      
       if callable(property_name):
         new_property = property_name(prop_value)
         

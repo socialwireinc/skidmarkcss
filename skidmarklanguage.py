@@ -49,7 +49,7 @@ re_charset_rule = rec(t_charset_rule)
 re_math = rec(t_math)
 re_name = rec(t_name)
 re_param = rec(t_param)
-re_propertyvalue = rec(r"[^;}]*")
+re_propertyvalue = rec(r"url\(data\:image/svg\+xml;base64,[^)]*\)|[^;}]*")
 re_string = rec(t_string)
 re_variable = rec(t_variable)
 

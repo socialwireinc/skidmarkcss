@@ -15,7 +15,7 @@ import skidmarklanguage
 import skidmarkoutputs
 from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
 from pluginmanager import SkidmarkCSSPlugin
-from plugindefaults import PropertyDarken, PropertyLighten
+from plugindefaults import PropertyDarken, PropertyLighten, PropertyGradient
 
 re_combinator = re.compile(r"(?:[^ ])([+>]{1}\s+)")
 
@@ -103,6 +103,7 @@ class SkidmarkCSS(object):
     
     self.add_plugin(PropertyDarken)
     self.add_plugin(PropertyLighten)
+    self.add_plugin(PropertyGradient)
     
     if plugins is not None and type(plugins) is list:
       for plugin in plugins:
@@ -678,11 +679,20 @@ class SkidmarkCSS(object):
     
     for node_data in data:
       property = self._process_node(node_data, oDeclarationBlock)
+      
       if property and isinstance(property, basestring):
         if isinstance(parent, n_Declaration):
           property = self._update_property(property)
         
         oDeclarationBlock.add_property(property)
+      elif property and isinstance(property, list):
+        for property in property:
+          
+          if property and isinstance(property, basestring):
+            if isinstance(parent, n_Declaration):
+              property = self._update_property(property)
+            
+            oDeclarationBlock.add_property(property)
     
     VARIABLE_STACK.pop()
     self._log("V Removing last variable set, remaining stack: %s" % ( str(VARIABLE_STACK), ))
@@ -713,6 +723,19 @@ class SkidmarkCSS(object):
     if not name or not value:
       raise UnrecognizedParsedTree("Failure during property parsing: %s" % ( str(data), ))
     
+    if isinstance(value, list):
+      properties = []
+      for property in value:
+        try:
+          p_name, p_value = n_DeclarationBlock.get_property_parts(property)
+        except ValueError:
+          p_name = name
+          p_value = property
+        
+        properties.append("%s%s%s" % ( p_name, skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format], p_value ))
+      
+      return properties
+    
     return "%s%s%s" % ( name, skidmarkoutputs.OUTPUT_TEMPLATE_PROPERTY_VALUE_SEPARATOR[self.output_format], value )
   
   def _nodeprocessor_property_unterminated(self, data, parent):
@@ -742,7 +765,7 @@ class SkidmarkCSS(object):
   def _nodeprocessor_string(self, data, parent):
     """Node Processor: string"""
     
-    if (data.startswith('"') or data.startwith("'")) and data.endswith(data[0]):
+    if (data.startswith('"') or data.startswith("'")) and data.endswith(data[0]):
       return data[1:-1]
     return data
   
