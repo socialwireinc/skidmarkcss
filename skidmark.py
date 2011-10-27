@@ -1218,6 +1218,8 @@ def execute_sm(config, **kw):
   if kw.get("return_err"):
     return err
   
+  print err
+  
   return
 
 def get_arguments():
