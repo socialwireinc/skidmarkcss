@@ -27,7 +27,8 @@ class PropertyGradient(SkidmarkCSSPlugin):
   def __init__(self):
     SkidmarkCSSPlugin.__init__(self, 'gradient')
 
-  def eval(self, direction, color_stop1, color_perc1, color_stop2, color_perc2, *args):
+  #def eval(self, direction, color_stop1, color_perc1, color_stop2, color_perc2, *args):
+  def eval(self, direction, *args):
     # Validate the direction
     if direction == "vertical":
       direction_type = ( "top", "linear, left top, left bottom", "top", "top", "top", "top", 0, "linear" )
@@ -42,6 +43,19 @@ class PropertyGradient(SkidmarkCSSPlugin):
     else:
       raise Exception("Invalid 'direction' for %s plugin, got '%s'" % ( self.name, direction ))
     
+    # Parse arguments, we have 5 possibilities here:
+    # case 1: 0 params, assume black to white 
+    # case 2: 1 param,  COLOR1 (assume perc1=0, color2=white, perc2=100)
+    # case 3: 2 params, COLOR1, COLOR2 (assume perc1=0, perc2=100)
+    # case 4: 3 params, COLOR1, PERC1, COLOR2 (assume perc2=100)
+    # case 5: 4+ params, PAIRS of (COLORx, PERCx) stops, needs to be EVEN
+    args = list(args)
+    if len(args) == 0: args.append("black")
+    if len(args) == 1: args.append("white")
+    if len(args) == 2: args = [args[0], "0%", args[1], "100%"]
+    if len(args) == 3: args.append("100%")
+    (color_stop1, color_perc1, color_stop2, color_perc2), args = args[:4], args[4:]
+
     # Assemble color stops
     color_stops = [
       (color_stop1, color_perc1),
