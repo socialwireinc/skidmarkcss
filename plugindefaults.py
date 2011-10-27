@@ -1,5 +1,7 @@
 # -*- coding: latin-1 -*-
 
+import time
+
 from pluginmanager import SkidmarkCSSPlugin, Color, Unit, pluginargs
 from htmlcolors import HTMLColors
 
@@ -38,9 +40,6 @@ class PropertyGradient(SkidmarkCSSPlugin):
     elif direction == "radial":
       direction_type = ( "center, ellipse cover", "radial, center center 0%, center center 100%", "center, ellipse cover", "center, ellipse cover", "center, ellipse cover", "center, ellipse cover", 1, "radial" )
     else:
-      direction_type = None
-    
-    if not direction_type:
       raise Exception("Invalid 'direction' for %s plugin, got '%s'" % ( self.name, direction ))
     
     # Assemble color stops
@@ -57,15 +56,17 @@ class PropertyGradient(SkidmarkCSSPlugin):
       clr = Color()
       clr.validate(color)
     
+    uniqueid = "grad-smcss-generated-%s" % ( str(time.time()).replace(".", "-"), )
+    
     svg = ["""<?xml version="1.0" ?>"""]
     svg.append("""<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1 1" preserveAspectRatio="none">""")
-    svg.append("""<linearGradient id="grad-ucgg-generated" gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="0%" y2="100%">""")
+    svg.append("""<linearGradient id="%s" gradientUnits="userSpaceOnUse" x1="0%%" y1="0%%" x2="0%%" y2="100%%">""" % ( uniqueid, ))
     
     for color, stop in color_stops:
       svg.append("""<stop offset="%s" stop-color="%s" stop-opacity="1"/>""" % ( stop, color ))
     
     svg.append("""</linearGradient>""")
-    svg.append("""<rect x="0" y="0" width="1" height="1" fill="url(#grad-ucgg-generated)" />""")
+    svg.append("""<rect x="0" y="0" width="1" height="1" fill="url(#%s)" />""" % ( uniqueid, ))
     svg.append("""</svg>""")
     
     color_stops_style1 = ",".join([ "%s %s" % ( color, stop ) for color, stop in color_stops ])
