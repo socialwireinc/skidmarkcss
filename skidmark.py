@@ -14,8 +14,7 @@ import StringIO
 import skidmarklanguage
 import skidmarkoutputs
 from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
-from pluginmanager import SkidmarkCSSPlugin
-from plugindefaults import PropertyDarken, PropertyLighten, PropertyGradient
+from plugindefaults import SkidmarkCSSPlugin, PropertyDarken, PropertyLighten, PropertyGradient, ColorFromHSL, Hue, Saturation, Lightness
 
 re_combinator = re.compile(r"(?:[^ ])([+>]{1}\s+)")
 
@@ -104,6 +103,10 @@ class SkidmarkCSS(object):
     self.add_plugin(PropertyDarken)
     self.add_plugin(PropertyLighten)
     self.add_plugin(PropertyGradient)
+    self.add_plugin(ColorFromHSL)
+    self.add_plugin(Hue)
+    self.add_plugin(Saturation)
+    self.add_plugin(Lightness)
     
     if plugins is not None and type(plugins) is list:
       for plugin in plugins:

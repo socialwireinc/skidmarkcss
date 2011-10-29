@@ -255,7 +255,7 @@ class HTMLColors(object):
     
     value = "#" + "".join([ ("0" + hex(i)[2:])[-2:] for i in (r, g, b) ])
     return cls.get_color_shortest(value)
-
+  
   @classmethod
   def lighten(cls, color, percentage=25):
     """Lightens a HTML color by the percentage specified"""
@@ -277,3 +277,105 @@ class HTMLColors(object):
       r, g, b = [ int(i - (percentage * i / 100.0)) for i in (r, g, b) ]
     
     return cls.get_color_from_rgb(r, g, b)
+  
+  @classmethod
+  def get_rgb_from_hsl(cls, h, s, l):
+    if s == 0:
+      r = g = b = int(l)
+    else:
+      if l < 0.5:
+        temp2 = l * (1.0 + s)   
+      else:
+        temp2 = l + s - l * s
+      
+      temp1 = 2.0 * l - temp2
+      
+      hp = h / 360.0
+      
+      def _get_color(temp1, temp2, temp3):
+        if temp3 < 0:
+          temp3 = temp3 + 1.0
+        if temp3 > 1:
+          temp3 = temp3 - 1.0
+       
+        if 6.0 * temp3 < 1:
+          return temp1 + (temp2 - temp1) * 6.0 * temp3
+        elif 2.0 * temp3 < 1:
+          return temp2
+        elif 3.0 * temp3 < 2:
+          return temp1 + (temp2 - temp1) * ((2.0/3.0) - temp3) * 6.0
+        
+        return temp1
+      
+      r = int(_get_color(temp1, temp2, hp + 1.0/3.0) * 255)
+      g = int(_get_color(temp1, temp2, hp) * 255)
+      b = int(_get_color(temp1, temp2, hp - 1.0/3.0) * 255)
+    
+    return (r, g, b)
+  
+  @classmethod
+  def get_color_from_hsl(cls, h, s, l):
+    rgb = cls.get_rgb_from_hsl(h, s, l)
+    return cls.get_color_from_rgb(*rgb)
+  
+  @classmethod
+  def get_hsl_from_rgb(cls, r, g, b):
+    """Returns tuple (hue, saturation, lightness) given an rgb"""
+    
+    r, g, b = [ v / 255.0 for v in (r, g, b) ]
+    rgb = [r, g, b]
+    
+    mincolor = min(rgb)
+    maxcolor = max(rgb)
+    
+    l = (mincolor + maxcolor) / 2
+    
+    if maxcolor == mincolor:
+      s = 0
+      h = 0
+      return (h, s, l)
+    
+    if l < 0.5:
+      s = (maxcolor - mincolor) / (maxcolor + mincolor)
+    else:
+      s = (maxcolor - mincolor) / (2.0 - maxcolor - mincolor)
+    
+    if r == maxcolor:
+      h = (g - b) / (maxcolor - mincolor)
+    if g == maxcolor:
+      h = 2.0 + (b - r) / (maxcolor - mincolor)
+    if b == maxcolor:
+      h = 4.0 + (r - g) / (maxcolor - mincolor)
+    
+    s, l = [ int(v * 100.0) for v in [s, l] ]
+    
+    h = int(h * 60.0)
+    
+    if h < 0:
+      h = h + 360
+    
+    return (h, s, l)
+  
+  @classmethod
+  def get_hue_from_color(cls, color):
+    return cls.get_hue_from_rgb(*cls.get_rgb(color))
+  
+  @classmethod
+  def get_hue_from_rgb(cls, r, g, b):
+    return cls.get_hsl_from_rgb(r, g, b)[0]
+  
+  @classmethod
+  def get_saturation_from_color(cls, color):
+    return cls.get_saturation_from_rgb(*cls.get_rgb(color))
+  
+  @classmethod
+  def get_saturation_from_rgb(cls, r, g, b):
+    return cls.get_hsl_from_rgb(r, g, b)[1]
+  
+  @classmethod
+  def get_lightness_from_color(cls, color):
+    return cls.get_lightness_from_rgb(*cls.get_rgb(color))
+  
+  @classmethod
+  def get_lightness_from_rgb(cls, r, g, b):
+    return cls.get_hsl_from_rgb(r, g, b)[2]    

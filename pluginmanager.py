@@ -32,14 +32,26 @@ class PluginArg(object):
     self.value = value
     return
   
+  @classmethod
+  def int_caster(cls, value):
+    try:
+      return int(value)
+    except:
+      try:
+        return int(float(value))
+      except:
+        pass
+    raise Exception("Unable to cast to 'int' for the following value: %s" % ( str(value), ))
+  
   def __str__(self):
     """Object representation: self.value"""
     
     return self.value
 
 class Unit(PluginArg):
-  def __init__(self, default=None, type=None):
+  def __init__(self, default=None, type=None, cast=None):
     self.type = type
+    self.cast = cast if cast is not int else PluginArg.int_caster
     super(Unit, self).__init__(default, type)
   
   def validate(self, value):
@@ -55,7 +67,11 @@ class Unit(PluginArg):
         raise Exception("Incorrect Unit Type. Got %s, but expected %s" % ( mo_type, self.type ))
     else:
       self.type = mo_type
-    self.value = mo_value
+    
+    if self.cast:
+      self.value = self.cast(mo_value)
+    else:
+      self.value = mo_value
     
     return
   

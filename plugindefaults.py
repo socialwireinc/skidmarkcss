@@ -27,7 +27,6 @@ class PropertyGradient(SkidmarkCSSPlugin):
   def __init__(self):
     SkidmarkCSSPlugin.__init__(self, 'gradient')
 
-  #def eval(self, direction, color_stop1, color_perc1, color_stop2, color_perc2, *args):
   def eval(self, direction, *args):
     # Validate the direction
     if direction == "vertical":
@@ -99,3 +98,36 @@ class PropertyGradient(SkidmarkCSSPlugin):
     
     return properties
 
+class ColorFromHSL(SkidmarkCSSPlugin):
+  def __init__(self):
+    SkidmarkCSSPlugin.__init__(self, 'color_from_hsl')
+  
+  @pluginargs(Unit(cast=int), Unit(cast=int), Unit(cast=int))
+  def eval(self, h, s, l):
+    h, s, l = [ v.value for v in (h, s, l) ]
+    s, l = [ v / 100.0 for v in (s, l) ]
+    return HTMLColors.get_color_from_hsl(h, s, l)
+
+class Hue(SkidmarkCSSPlugin):
+  def __init__(self):
+    SkidmarkCSSPlugin.__init__(self, 'hue')
+  
+  @pluginargs(Color)
+  def eval(self, color):
+    return str(HTMLColors.get_hue_from_color(color.value))
+
+class Saturation(SkidmarkCSSPlugin):
+  def __init__(self):
+    SkidmarkCSSPlugin.__init__(self, 'saturation')
+  
+  @pluginargs(Color)
+  def eval(self, color):
+    return str(HTMLColors.get_saturation_from_color(color.value))
+
+class Lightness(SkidmarkCSSPlugin):
+  def __init__(self):
+    SkidmarkCSSPlugin.__init__(self, 'lightness')
+  
+  @pluginargs(Color)
+  def eval(self, color):
+    return str(HTMLColors.get_lightness_from_color(color.value))

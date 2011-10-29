@@ -63,7 +63,7 @@ def builtin_css_directives():
   return [ import_rule, charset_rule ]
 
 def variable_set():
-  return variable(), "=", [ math_operation, constant, variable ], ";"
+  return variable(), "=", [ math_operation, plugin, constant, variable ], ";"
 
 def variable():
   return re_variable
