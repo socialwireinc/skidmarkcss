@@ -908,6 +908,11 @@ class SkidmarkCSS(object):
     
     for node_data in elements:
       param_value = self._process_node(node_data, None)
+      
+      if not isinstance(param_value, basestring):
+        # TODO find a cleaner way to display the type
+        raise Unimplemented("%s is not supported for variable assignments" % ( (str(type(param_value))[1:-1]).capitalize(), ))
+      
       for quote_char in ('"', "'"):
         if param_value.startswith(quote_char) and param_value.endswith(quote_char):
           param_value = param_value.strip(quote_char)
@@ -1136,46 +1141,13 @@ class MathOperations(object):
 
 # ----------------------------------------------------------------------------
 
-def simple_process_file(infile):
-  try:
-    sm = SkidmarkCSS(infile, verbose=False, output_format=skidmarkoutputs.CSS_OUTPUT_CLEAN)
-    print "\n".join(sm._generate_css())
-  except:
-    err = """body:before { content: \""""
-    try:
-      raise
-    except Unimplemented, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except UnrecognizedParsedTree, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except UnexpectedTreeFormat, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except ErrorInFile, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except UnrecognizedSelector, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except FileNotFound, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except UndefinedTemplate, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except InvalidTemplateUse, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except VariableNotFound, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    except Exception, e:
-      err += "%s: %s" % ( e.__class__.__name__, str(e).strip().replace("\n", " -- ") )
-    finally:
-      err += """\"; }"""
-   
-    print err
-
 def processFromString(src_str, **kw):
   """Parse the SkidmarkCSS supplied as a string and returns the CSS as a string"""
   
   infile = StringIO.StringIO(src_str)
   outfile = StringIO.StringIO()
   params = dict([ (k, v) for k, v in kw.iteritems() if k not in ["infile", "outfile"] ])
-  err = execute_sm(params, infile=infile, outfile=outfile, return_err=True)
+  err = execute_sm(params, infile=infile, outfile=outfile)
   
   return ( outfile.getvalue(), err )
 
@@ -1215,12 +1187,7 @@ def execute_sm(config, **kw):
       err.append("-=" * (72/2))
   
   err = "\n".join(err)
-  if kw.get("return_err"):
-    return err
-  
-  print err
-  
-  return
+  return err
 
 def get_arguments():
   import argparse
@@ -1273,4 +1240,6 @@ if __name__ == '__main__':
     unify_selectors=args.unify_selectors
   )
   
-  execute_sm(config, infile=infile, outfile=outfile)
+  err = execute_sm(config, infile=infile, outfile=outfile)
+  if err:
+    print err
