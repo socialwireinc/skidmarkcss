@@ -49,9 +49,13 @@ re_charset_rule = rec(t_charset_rule)
 re_math = rec(t_math)
 re_name = rec(t_name)
 re_param = rec(t_param)
-re_propertyvalue = rec(r"url\(data\:image/svg\+xml;base64,[^)]*\)|[^;}]*")
+re_propertyvalue = rec(r"[^;}]*")
 re_string = rec(t_string)
 re_variable = rec(t_variable)
+re_property_value_start = re.compile("[a-zA-Z0-9_:#=().,-]+")
+re_simple_property = re.compile("[a-zA-Z0-9]+")
+re_css_func = re.compile("[a-zA-Z0-9-]+\([^\(]+(\([^\(\)]+?\)[^\(]+)*[^\)]+\)\)|[a-zA-Z0-9-]+\([^)]*\)")
+
 
 def import_rule():
   return re_import_rule
@@ -75,7 +79,7 @@ def mathconstant():
   return re_mathconstant
 
 def math_operation():
-  return [ math_var(), math_group ], math_op(), [ math_var(), math_group ], ZERO_OR_MORE, (math_op(), [ math_var(), math_group ])
+  return "(", [ math_var(), math_group ], math_op(), [ math_var(), math_group ], ZERO_OR_MORE, (math_op(), [ math_var(), math_group ]), ")"
 
 def math_var():
   return [ mathconstant, variable ]
@@ -171,13 +175,13 @@ def propertyname():
   return re_name
 
 def propertyvalue():
-  return [ math_operation, plugin, propertyvalue_pluginextended, re_propertyvalue ]
+  return ZERO_OR_MORE, [ math_operation, propertyvalue_pluginextended, plugin, re_css_func, re_property_value_start, re_simple_property ], re_propertyvalue
 
 def pre_plugin_text():
   return rec("[^~;]*")
   
 def propertyvalue_pluginextended():
-  return pre_plugin_text(), plugin, ZERO_OR_MORE, propertyvalue_pluginextended, propertyvalue()
+  return re_simple_property, plugin, ZERO_OR_MORE, propertyvalue_pluginextended
 
 def property():
   return property_unterminated(), ";"

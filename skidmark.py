@@ -130,6 +130,7 @@ class SkidmarkCSS(object):
     self._process_output()
     
     if self.timer and self.log_indent_level == 0:
+      verbose = self.verbose
       self.verbose = True
       self._log("-> Processed '%s' in %.04f seconds" % ( s_infile, time.time() - start_time, ))
       self.verbose = verbose
@@ -717,7 +718,24 @@ class SkidmarkCSS(object):
         if isinstance(property_item, basestring):
           value = property_item.strip()
         elif type(property_item) is list:
-          value = self._process_node(property_item[0], parent=None)
+          all_str = True
+          
+          values = []
+          for p_item in property_item:
+            if isinstance(p_item, (list, tuple)):
+              result = self._process_node(p_item, parent=None)
+              if isinstance(result, (list, tuple)):
+                all_str = False
+                values.extend(list(result))
+              else:
+                values.append(result)
+            else:
+              values.append(p_item)
+            
+          if all_str:
+            value = " ".join(values)
+          else:
+            value = values
         else:
           raise Unimplemented("Unrecognized value for parameter '%s', got '%s'" % ( name or '?', str(property_item) ))
       else:
@@ -996,13 +1014,18 @@ class SkidmarkCSS(object):
     """The concatenated rendered data is the property string"""
     
     value = []
+    
     for item in data:
       if isinstance(item, basestring):
         value.append(item.strip())
       else:
-        value.append(self._process_node(item))
+        result = self._process_node(item)
+        if isinstance(result, (list, tuple)):
+          value.extend(result)
+        else:
+          value.append(result)
     
-    return " ".join(value)
+    return value
   
   def _nodeprocessor_pre_plugin_text(self, data, parent):
     """The data should be the string we're looking for"""
