@@ -13,7 +13,7 @@ import StringIO
 
 import skidmarklanguage
 import skidmarkoutputs
-from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template
+from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template, n_MediaQuery
 from plugindefaults import SkidmarkCSSPlugin, PropertyDarken, PropertyLighten, PropertyGradient, ColorFromHSL, Hue, Saturation, Lightness
 
 re_combinator = re.compile(r"(?:[^ ])([+>]{1}\s+)")
@@ -175,7 +175,7 @@ class SkidmarkCSS(object):
     
     config = dict(
       verbose=self.verbose,
-      printcss=self.printcss,
+      printcss=self.purintcss,
       output_format=self.output_format,
       show_hierarchy=self.show_hierarchy,
       simplify_output=self.simplify_output,
@@ -354,6 +354,12 @@ class SkidmarkCSS(object):
       if isinstance(node, n_TextNode):
         css.append(node.text)
         continue
+      
+      if isinstance(node, n_MediaQuery):
+        media_query_blocks = self._generate_css(node.blocks)
+        css_str = skidmarkoutputs.OUTPUT_TEMPLATE_DECLARATION_SEPARATOR[self.output_format].join(media_query_blocks)
+        css_str = ("\n".join([ "%s%s" % ( " " * skidmarkoutputs.SPACING_CLEAN * (0 if idx == 0 else 1), s ) for idx, s in enumerate(css_str.split("\n")) ])).strip()
+        css.append(skidmarkoutputs.OUTPUT_TEMPLATE_MEDIAQUERY[self.output_format] % ( node.media_query, css_str ))
       
       if type(node) is list:
         blocks = []
@@ -811,6 +817,14 @@ class SkidmarkCSS(object):
     """Processor for the '@charset' rule"""
     
     return n_TextNode(parent, data)
+    
+  def _nodeprocessor_mediaquery(self, data, parent):
+    """Processor for the '@media' rule"""
+    
+    blocks = self._process_node(data[1])
+    blocks = [ type(item) is list and len(item) == 1 and item[0] or item for item in blocks if item ]
+    
+    return n_MediaQuery(parent, data[0], blocks)
   
   def _nodeprocessor_template(self, data, parent):
     """Define a template that may be reused several times throughout this CSS"""

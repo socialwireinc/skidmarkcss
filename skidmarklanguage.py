@@ -189,6 +189,9 @@ def property():
 def property_unterminated():
   return propertyname, ":", propertyvalue
 
+def mediaquery():
+  return re.compile("@media\s+[^{]*"), "{", language, "}"
+
 def declarationblock():
   return "{", ZERO_OR_MORE, [ property, directive, comment, declaration, use, expansion, variable_set ], ZERO_OR_ONE, property_unterminated, "}"
 
@@ -196,4 +199,4 @@ def declaration():
   return full_selector(), declarationblock
   
 def language():
-  return ZERO_OR_MORE, [ builtin_css_directives(), declaration, directive, comment, template, variable_set ]
+  return ZERO_OR_MORE, [ builtin_css_directives(), declaration, directive, comment, template, variable_set, mediaquery ]

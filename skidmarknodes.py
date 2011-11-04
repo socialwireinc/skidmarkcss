@@ -199,7 +199,14 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     for property_name in expanded_property_names:
       if not self.requires_shorthand_check and property_name in props_available_for_shorthand:
         self.requires_shorthand_check = True
-      
+
+      if property_name in property_names:
+        # TODO: Right now, we allow duplicating the "background" and "background-image" tag for
+        # the gradient support. Is there a better way to to this?
+        if not property_name in ("background", "background-image"):
+          property_position = property_names.index(property_name)
+          self.properties.pop(property_position)
+        
       if callable(property_name):
         new_property = property_name(prop_value)
         
@@ -381,3 +388,15 @@ class n_Template(SkidmarkHierarchy):
     dec_block = sm._process_node(ast, parent=None)
     
     return dec_block
+
+class n_MediaQuery(SkidmarkHierarchy):
+  """Defines a media query"""
+  
+  def __init__(self, parent, media_query, blocks):
+    SkidmarkHierarchy.__init__(self, parent)
+    self.media_query = media_query
+    self.blocks = blocks
+  
+  def __repr__(self):
+    return "%s : %s" % ( SkidmarkHierarchy.__repr__(self), self.media_query )
+
