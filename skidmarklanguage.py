@@ -52,7 +52,7 @@ re_param = rec(t_param)
 re_propertyvalue = rec(r"[^;}]*")
 re_string = rec(t_string)
 re_variable = rec(t_variable)
-re_property_value_start = re.compile("[a-zA-Z0-9_:#=().,-]+")
+re_property_value_start = re.compile("[a-zA-Z0-9_:#=().,%-]+")
 re_simple_property = re.compile("[a-zA-Z0-9]+")
 re_css_func = re.compile("[a-zA-Z0-9-]+\([^\r\n}]*\)")
 
