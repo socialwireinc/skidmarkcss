@@ -997,7 +997,8 @@ class SkidmarkCSS(object):
   def _nodeprocessor_math_group(self, data, parent):
     """Processes a math group (math expressions found within parentheses)"""
     
-    return self._nodeprocessor_math_operation_helper(data)
+    math_seq = self._nodeprocessor_math_operation_helper(data)
+    return self._get_math_ops().reduce_group(math_seq)
   
   def _nodeprocessor_math_operation_helper(self, data):
     """Helper Function: Returns a normalized sequence of operations (Python list)"""
@@ -1008,7 +1009,7 @@ class SkidmarkCSS(object):
         seq.append(item)
       else:
         seq.append(self._process_node(item))
-        
+    
     return seq
   
   def _nodeprocessor_plugin(self, data, parent):

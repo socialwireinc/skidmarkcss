@@ -54,7 +54,7 @@ re_string = rec(t_string)
 re_variable = rec(t_variable)
 re_property_value_start = re.compile("[a-zA-Z0-9_:#=().,-]+")
 re_simple_property = re.compile("[a-zA-Z0-9]+")
-re_css_func = re.compile("[a-zA-Z0-9-]+\([^\(]+(\([^\(\)]+?\)[^\(]+)*[^\)]+\)\)|[a-zA-Z0-9-]+\([^)]*\)")
+re_css_func = re.compile("[a-zA-Z0-9-]+\([^\r\n}]*\)")
 
 
 def import_rule():
@@ -67,7 +67,7 @@ def builtin_css_directives():
   return [ import_rule, charset_rule ]
 
 def variable_set():
-  return variable(), "=", [ math_operation, plugin, constant, variable ], ";"
+  return variable(), "=", [ math_group, plugin, constant, variable ], ";"
 
 def variable():
   return re_variable
@@ -79,7 +79,7 @@ def mathconstant():
   return re_mathconstant
 
 def math_operation():
-  return "(", [ math_var(), math_group ], math_op(), [ math_var(), math_group ], ZERO_OR_MORE, (math_op(), [ math_var(), math_group ]), ")"
+  return [ math_var(), math_group ], math_op(), [ math_var(), math_group ], ZERO_OR_MORE, (math_op(), [ math_var(), math_group ])
 
 def math_var():
   return [ mathconstant, variable ]
@@ -118,7 +118,7 @@ def param_list():
   return ZERO_OR_ONE, arg(), ZERO_OR_MORE, (",", arg())
   
 def arg():
-  return [ plugin, variable, string, math_operation, param ]
+  return [ plugin, variable, string, math_group, param ]
   
 def function_declaration():
   return ident(), "(", ZERO_OR_ONE, param_list_declaration(), ")"
@@ -175,7 +175,7 @@ def propertyname():
   return re_name
 
 def propertyvalue():
-  return ZERO_OR_MORE, [ math_operation, propertyvalue_pluginextended, plugin, re_css_func, re_property_value_start, re_simple_property ], re_propertyvalue
+  return ZERO_OR_MORE, [ math_group, propertyvalue_pluginextended, plugin, re_css_func, re_property_value_start, re_simple_property ], re_propertyvalue
 
 def pre_plugin_text():
   return rec("[^~;]*")
@@ -199,4 +199,4 @@ def declaration():
   return full_selector(), declarationblock
   
 def language():
-  return ZERO_OR_MORE, [ builtin_css_directives(), declaration, directive, comment, template, variable_set, mediaquery ]
+  return ZERO_OR_MORE, [ comment, builtin_css_directives(), declaration, directive, template, variable_set, mediaquery ]
