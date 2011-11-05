@@ -5,16 +5,17 @@
 import copy
 import itertools
 import os
-import pyPEG
 import re
 import sys
 import time
 import StringIO
 
-import skidmarklanguage
-import skidmarkoutputs
-from skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template, n_MediaQuery
-from plugindefaults import SkidmarkCSSPlugin, PropertyDarken, PropertyLighten, PropertyGradient, ColorFromHSL, Hue, Saturation, Lightness
+from pypeg import pyPEG
+
+from core import skidmarklanguage
+from core import skidmarkoutputs
+from core.skidmarknodes import SkidmarkHierarchy, n_Declaration, n_Selector, n_DeclarationBlock, n_TextNode, n_Template, n_MediaQuery
+from core.plugindefaults import SkidmarkCSSPlugin, PropertyDarken, PropertyLighten, PropertyGradient, ColorFromHSL, Hue, Saturation, Lightness
 
 re_combinator = re.compile(r"(?:[^ ])([+>]{1}\s+)")
 
