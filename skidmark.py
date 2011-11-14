@@ -122,6 +122,7 @@ class SkidmarkCSS(object):
       self.include_base_path = os.path.dirname(parent_src)
     
     self.ast = self._parse_file()
+    ast_stop = time.time()
     
     self.processed_tree = self._process()
     
@@ -133,7 +134,13 @@ class SkidmarkCSS(object):
     if self.timer and self.log_indent_level == 0:
       verbose = self.verbose
       self.verbose = True
-      self._log("-> Processed '%s' in %.04f seconds" % ( s_infile, time.time() - start_time, ))
+      
+      full_time = time.time() - start_time
+      ast_time = ast_stop - start_time
+      
+      ast_perc = ast_time * 100.0 / full_time
+      
+      self._log("-> Processed '%s' in %.04f seconds, AST: %.04fs %.0f%%, SM: %.04fs %.0f%%" % ( s_infile, full_time, ast_time, ast_perc, full_time - ast_time, 100.0 - ast_perc ))
       self.verbose = verbose
     
     return
