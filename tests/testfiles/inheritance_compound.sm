@@ -1,0 +1,10 @@
+ul {
+  &.test {
+    display: none;
+    li { color: green; }
+  }
+  li {
+    padding: 8px;
+    &.first { padding: 0; }
+  }
+}
