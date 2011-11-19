@@ -66,34 +66,6 @@ class InvalidArgumentException(Exception):
   pass
 
 
-def parseLine(textline, pattern, resultSoFar = [], skipWS = True, skipComments = None, packrat = False):
-  lines, lineNo = [], 0
-
-  orig = u""
-  for lineno, line in enumerate(textline.split("\n")):
-    lines.append((len(orig), lineno))
-    orig += unicode(line) + "\n"
-  textlen = len(orig)
-  
-  p = pyPEG.parser()
-  p.packrat = packrat
-  text = pyPEG.skip(p.skipper, textline, pattern, skipWS, skipComments)
-  ast, text = p.parseLine(text, pattern, resultSoFar, skipWS, skipComments)
-  
-  
-  err = None
-  if p.restlen:
-    error_pos = len(textline) - p.restlen
-    line_no = [ data[1] for data in lines if data[0] < error_pos ][-1]
-    
-    char_pos = error_pos - lines[line_no][0] - 1
-    if line_no + 1 >= len(lines):
-      err = ( textline[lines[line_no][0]:], line_no + 1, char_pos)
-    else:
-      err = ( textline[lines[line_no][0]:lines[line_no + 1][0]], line_no + 1, char_pos)
-    
-  return ast, err
-
 #
 # Variables and Constants
 #
@@ -204,6 +176,39 @@ class SkidmarkCSS(object):
     self.__dict__.update(config_dict)
     
     return
+    
+  def _get_ast(self, textline, pattern, resultSoFar=[], skipWS=True, skipComments=None, packrat=False):
+    """Calls pyPEG to obtain the AST
+    Returns a tuple containing the pyPEG AST and error: (ast, err)
+    If the source file is fully parsed, then err == None, else err is a tuple with
+    the following information: (textline_err_pos, line_no, line_err_pos)"""
+    
+    lines = []
+    lineNo = 0
+    err = None
+    orig = u""
+
+    for lineno, line in enumerate(textline.split("\n")):
+      lines.append((len(orig), lineno))
+      orig += unicode(line) + "\n"
+    textlen = len(orig)
+    
+    p = pyPEG.parser()
+    p.packrat = packrat
+    text = pyPEG.skip(p.skipper, textline, pattern, skipWS, skipComments)
+    ast, text = p.parseLine(text, pattern, resultSoFar, skipWS, skipComments)
+    
+    if p.restlen:
+      error_pos = len(textline) - p.restlen
+      line_no = [ data[1] for data in lines if data[0] < error_pos ][-1]
+      
+      char_pos = error_pos - lines[line_no][0] - 1
+      if line_no + 1 >= len(lines):
+        err = ( textline[lines[line_no][0]:], line_no + 1, char_pos)
+      else:
+        err = ( textline[lines[line_no][0]:lines[line_no + 1][0]], line_no + 1, char_pos)
+      
+    return ast, err
   
   def get_config_dict(self, **kw):
     """Returns a config dictionary, using the current config values and
@@ -270,7 +275,7 @@ class SkidmarkCSS(object):
     self._log("Using pyPEG to obtain the AST")
     self._update_log_indent(-1)
     
-    return parseLine(self.src, skidmarklanguage.language, resultSoFar=[], skipWS=True)
+    return self._get_ast(self.src, skidmarklanguage.language, resultSoFar=[], skipWS=True)
   
   def _get_file_src(self):
     """Reads the byte content of self.s_infile and returns it as a string"""

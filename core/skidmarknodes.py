@@ -6,7 +6,7 @@ import copy
 
 import skidmarkoutputs
 from propertyexpandables import PROPERTY_EXPANDABLES, PROPERTY_SHORTHANDS, ShorthandHandler, ExpandableHandler
-from skidmarklanguage import re_name
+from skidmarklanguage import re_pname
 
 class SkidmarkHierarchy(object):
   """This is the master class for all skidmark objects.
@@ -334,7 +334,7 @@ class n_DeclarationBlock(SkidmarkHierarchy):
     name, value = [ ps.strip() for ps in prop.split(":", 1) ]
     
     # Validate the property name
-    if re_name.match(name).group() != name:
+    if re_pname.match(name).group() != name:
       raise ValueError("Unable to obtain property parts for '%s'" % ( prop, ))
     
     return name, value

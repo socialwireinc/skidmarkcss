@@ -1,7 +1,1 @@
-div {
-  background: ~gradient('vertical', #fa0000, 0%, #ffffff, 15%, #000000, 100%);
-  background: ~gradient('vertical');
-  background: ~gradient('vertical', #fa0000);
-  background: ~gradient('vertical', #fa0000, #ffffff);
-  background: ~gradient('vertical', #fa0000, 0%, #ffffff, 15%);
-}
+div{*color:0}

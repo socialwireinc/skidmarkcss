@@ -32,6 +32,8 @@ t_charset_rule = "\@charset\s+[^;]*;"
 t_math = "(\*|\/|\+|\-){1}"
 t_comment = r"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/"
 t_param = "[a-zA-Z0-9#.]+%?|" + t_string + "|" + t_variable
+t_pnmchar = "[A-Za-z0-9-]|" + p(t_nonascii) + "|" + p(t_escape)
+t_pname = p(p("\*?" + t_pnmchar) + "+" + "|[*_]?[A-Za-z0-9-]+")
 
 # Compiled RegExp
 rec = re.compile
@@ -48,6 +50,7 @@ re_import_rule = rec(t_import_rule)
 re_charset_rule = rec(t_charset_rule)
 re_math = rec(t_math)
 re_name = rec(t_name)
+re_pname = rec(t_pname)
 re_param = rec(t_param)
 re_propertyvalue = rec(r"[^;}]*")
 re_string = rec(t_string)
@@ -172,7 +175,7 @@ def plugin():
   return "~", function()
 
 def propertyname():
-  return re_name
+  return re_pname
 
 def propertyvalue():
   return ZERO_OR_MORE, [ math_group, propertyvalue_pluginextended, plugin, re_css_func, re_property_value_start, re_simple_property ], re_propertyvalue
